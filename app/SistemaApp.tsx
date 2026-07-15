@@ -98,23 +98,7 @@ function Login({ onLogin }: { onLogin: (name: string) => void }) {
 
   return (
     <main className="login-page">
-      <section className="login-hero" aria-label="Presentación del sistema">
-        <div className="brand-mark brand-mark--light"><span>SIG</span></div>
-        <div className="hero-copy">
-          <p className="kicker">Gestión conectada · decisiones claras</p>
-          <h1>Sistema Integral<br />de Gestión</h1>
-          <p>Personas, documentos, asistencia y procesos en una sola plataforma segura.</p>
-        </div>
-        <div className="people-scene" aria-hidden="true">
-          <div className="scene-glow" />
-          <div className="scene-card scene-card--one"><b>✓</b><span>Documentos</span><i /></div>
-          <div className="scene-card scene-card--two"><b>▥</b><span>Reportes</span><i /></div>
-          <div className="person person--one"><i /><b /><span /></div>
-          <div className="person person--two"><i /><b /><span /></div>
-          <div className="person person--three"><i /><b /><span /></div>
-        </div>
-        <p className="hero-footer">Transportes ICT · Plataforma corporativa</p>
-      </section>
+      <section className="login-hero" aria-label="Portada del Sistema Integral de Gestión" />
       <section className="login-panel">
         <form className="login-card" onSubmit={submit}>
           <div className="brand-mark"><span>SIG</span></div>
