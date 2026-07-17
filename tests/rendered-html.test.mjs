@@ -77,9 +77,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Centro de costo/);
   assert.match(operational, /Empresa principal/);
   assert.match(operational, /Monto del anticipo/);
-  assert.match(operational, /Calendario de asistencia por trabajador/);
+  assert.match(operational, /Asistencia mensual por trabajador/);
   assert.match(operational, /Primera Jornada \(AM\)/);
-  assert.match(operational, /Totalidad de empresa/);
+  assert.match(operational, /Total empresa/);
   assert.match(operational, /Resumen de saldos por trabajador/);
   assert.match(operational, /Número de folio/);
   assert.doesNotMatch(operational, /Por obra y día/);
@@ -110,4 +110,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(schema, /sqliteTable\("worker_records"/);
   assert.match(schema, /sqliteTable\("medical_leaves"/);
   assert.match(schema, /sqliteTable\("attendance_entries"/);
+  assert.match(schema, /sqliteTable\("system_base_items"/);
+  assert.match(schema, /sqliteTable\("document_templates"/);
+  assert.match(schema, /sqliteTable\("user_profiles"/);
+  for (const label of ["Bases del sistema", "Maestros", "Modificación masiva", "Seleccionar obra para modificar", "Vista general mensual", "Vista individual", "Archivo del trabajador"]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
+  assert.doesNotMatch(app, /\["Feriados",/);
 });

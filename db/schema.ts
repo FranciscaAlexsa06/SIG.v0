@@ -78,9 +78,43 @@ export const workSites = sqliteTable("work_sites", {
   company: text("company").notNull().default(""),
   client: text("client").notNull().default(""),
   address: text("address").notNull().default(""),
+  region: text("region").notNull().default(""),
+  commune: text("commune").notNull().default(""),
   status: text("status").notNull().default("Activa"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const userProfiles = sqliteTable("user_profiles", {
+  id: text("id").primaryKey(),
+  workerRut: text("worker_rut").notNull().unique(),
+  workerName: text("worker_name").notNull(),
+  profile: text("profile").notNull(),
+  scope: text("scope").notNull().default("Total empresa"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const systemBaseItems = sqliteTable("system_base_items", {
+  id: text("id").primaryKey(),
+  category: text("category").notNull(),
+  name: text("name").notNull(),
+  value: text("value").notNull().default(""),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const documentTemplates = sqliteTable("document_templates", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  documentType: text("document_type").notNull(),
+  description: text("description").notNull().default(""),
+  fileName: text("file_name").notNull(),
+  fileKey: text("file_key").notNull(),
+  contentType: text("content_type").notNull().default("application/octet-stream"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const attendanceEntries = sqliteTable("attendance_entries", {
