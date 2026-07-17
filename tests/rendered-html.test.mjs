@@ -64,7 +64,8 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   ]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
 
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
-  assert.match(styles, /background-size:contain/);
+  assert.match(styles, /login-hero:after[\s\S]*center\/contain no-repeat/);
+  assert.match(styles, /login-hero:before[\s\S]*center\/cover no-repeat/);
   assert.match(app, /path: "\/licencias"/);
 
   for (const label of [
