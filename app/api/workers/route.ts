@@ -4,6 +4,8 @@ import { auditEvents, workers } from "../../../db/schema";
 
 type WorkerPayload = {
   workerCode?: string;
+  firstNames?: string;
+  lastNames?: string;
   entryDate?: string;
   fullName?: string;
   identityNumber?: string;
@@ -32,14 +34,15 @@ type WorkerPayload = {
   accountType?: string;
   accountNumber?: string;
   requiresAdvance?: string | boolean;
+  advanceAmount?: string | number;
   emergencyName?: string;
   emergencyRelationship?: string;
   emergencyMobile?: string;
 };
 
-const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "fullName", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
+const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
 
-function missingRequired(payload: WorkerPayload) { return requiredKeys.some((key) => !clean(payload[key])) || cleanWorkSites(payload).length === 0; }
+function missingRequired(payload: WorkerPayload) { return requiredKeys.some((key) => !clean(payload[key])) || (!clean(payload.fullName) && (!clean(payload.firstNames) || !clean(payload.lastNames))) || cleanWorkSites(payload).length === 0; }
 
 function clean(value: unknown) { return String(value ?? "").trim(); }
 
@@ -52,10 +55,11 @@ function cleanWorkSites(payload: WorkerPayload) {
 
 function workerValues(payload: WorkerPayload, source: string) {
   const sites = cleanWorkSites(payload);
+  const firstNames = clean(payload.firstNames); const lastNames = clean(payload.lastNames); const fullName = [firstNames, lastNames].filter(Boolean).join(" ") || clean(payload.fullName);
   return {
     id: `TRA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-    workerCode: clean(payload.workerCode),
-    entryDate: clean(payload.entryDate), fullName: clean(payload.fullName), identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
+    workerCode: clean(payload.workerCode), firstNames, lastNames,
+    entryDate: clean(payload.entryDate), fullName, identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", advanceAmount: Number(payload.advanceAmount ?? 0), emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
   };
 }
 

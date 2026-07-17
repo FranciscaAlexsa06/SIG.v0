@@ -32,6 +32,8 @@ export const auditEvents = sqliteTable("audit_events", {
 export const workers = sqliteTable("workers", {
   id: text("id").primaryKey(),
   workerCode: text("worker_code").notNull().default(""),
+  firstNames: text("first_names").notNull().default(""),
+  lastNames: text("last_names").notNull().default(""),
   entryDate: text("entry_date").notNull(),
   fullName: text("full_name").notNull(),
   identityNumber: text("identity_number").notNull().unique(),
@@ -60,6 +62,7 @@ export const workers = sqliteTable("workers", {
   accountType: text("account_type").notNull(),
   accountNumber: text("account_number").notNull(),
   requiresAdvance: integer("requires_advance", { mode: "boolean" }).notNull().default(false),
+  advanceAmount: integer("advance_amount").notNull().default(0),
   emergencyName: text("emergency_name").notNull(),
   emergencyRelationship: text("emergency_relationship").notNull(),
   emergencyMobile: text("emergency_mobile").notNull(),
@@ -71,12 +74,33 @@ export const workers = sqliteTable("workers", {
 export const workSites = sqliteTable("work_sites", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
+  costCenter: text("cost_center").notNull().default(""),
   company: text("company").notNull().default(""),
   client: text("client").notNull().default(""),
   address: text("address").notNull().default(""),
   status: text("status").notNull().default("Activa"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const attendanceEntries = sqliteTable("attendance_entries", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id").notNull(),
+  date: text("date").notNull(),
+  workerRut: text("worker_rut").notNull(),
+  workerName: text("worker_name").notNull(),
+  costCenter: text("cost_center").notNull().default(""),
+  states: text("states").notNull().default("[]"),
+  amIn: text("am_in").notNull().default("08:00"),
+  amOut: text("am_out").notNull().default("13:00"),
+  pmIn: text("pm_in").notNull().default("15:00"),
+  pmOut: text("pm_out").notNull().default("18:00"),
+  attachmentType: text("attachment_type").notNull().default(""),
+  fileName: text("file_name").notNull().default(""),
+  fileKey: text("file_key").notNull().default(""),
+  contentType: text("content_type").notNull().default(""),
+  status: text("status").notNull().default("En revisión"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const workerRecords = sqliteTable("worker_records", {

@@ -65,7 +65,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
 
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   assert.match(app, /login-cover-v2\.png/);
-  assert.match(styles, /login-hero>img[\s\S]*object-fit:fill/);
+  assert.match(styles, /login-hero>img[\s\S]*object-fit:contain/);
   assert.doesNotMatch(styles, /center\/contain no-repeat/);
   assert.match(operational, /Editar ficha/);
   assert.match(operational, /Código del trabajador/);
@@ -74,6 +74,15 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Corriente/);
   assert.match(operational, /Obras asignadas/);
   assert.match(operational, /api\/work-sites/);
+  assert.match(operational, /Centro de costo/);
+  assert.match(operational, /Empresa principal/);
+  assert.match(operational, /Monto del anticipo/);
+  assert.match(operational, /Calendario de asistencia por trabajador/);
+  assert.match(operational, /Primera Jornada \(AM\)/);
+  assert.match(operational, /Totalidad de empresa/);
+  assert.match(operational, /Resumen de saldos por trabajador/);
+  assert.match(operational, /Número de folio/);
+  assert.doesNotMatch(operational, /Por obra y día/);
   assert.match(app, /path: "\/licencias"/);
 
   for (const label of [
@@ -91,13 +100,14 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(workersApi, /getDb\(\)/);
   assert.match(schema, /sqliteTable\("workers"/);
   assert.ok((operational.match(/useConnectedWorkers\(processes/g) ?? []).length >= 6);
-  assert.match(operational, /Ver resumen/);
+  assert.match(operational, /Seleccionar trabajador/);
   assert.match(operational, /\/personas\/resumen\//);
   assert.match(app, /fetch\("\/api\/workers"/);
-  for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Contratos y anexos", "Cumplimiento personal", "Ver resumen"]) assert.match(operational, new RegExp(label, "i"));
+  for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Contratos y anexos", "Cumplimiento personal", "Seleccionar trabajador"]) assert.match(operational, new RegExp(label, "i"));
   assert.match(operational, /api\/worker-records/);
   assert.match(operational, /api\/medical-leaves/);
   assert.equal(JSON.parse(hosting).r2, "FILES");
   assert.match(schema, /sqliteTable\("worker_records"/);
   assert.match(schema, /sqliteTable\("medical_leaves"/);
+  assert.match(schema, /sqliteTable\("attendance_entries"/);
 });

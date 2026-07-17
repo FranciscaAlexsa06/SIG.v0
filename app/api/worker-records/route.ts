@@ -5,9 +5,9 @@ import { auditEvents, workerRecords } from "../../../db/schema";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url); const rut = url.searchParams.get("rut")?.trim(); const category = url.searchParams.get("category")?.trim();
-    if (!rut) return Response.json({ error: "Falta el trabajador." }, { status: 400 });
-    const condition = category ? and(eq(workerRecords.workerRut, rut), eq(workerRecords.category, category)) : eq(workerRecords.workerRut, rut);
-    return Response.json({ records: await getDb().select().from(workerRecords).where(condition).orderBy(desc(workerRecords.createdAt)).limit(1000) });
+    const condition = rut && category ? and(eq(workerRecords.workerRut, rut), eq(workerRecords.category, category)) : rut ? eq(workerRecords.workerRut, rut) : category ? eq(workerRecords.category, category) : undefined;
+    const query = getDb().select().from(workerRecords);
+    return Response.json({ records: condition ? await query.where(condition).orderBy(desc(workerRecords.createdAt)).limit(2000) : await query.orderBy(desc(workerRecords.createdAt)).limit(2000) });
   } catch (error) { return Response.json({ records: [], error: error instanceof Error ? error.message : "No fue posible consultar los registros." }, { status: 503 }); }
 }
 
