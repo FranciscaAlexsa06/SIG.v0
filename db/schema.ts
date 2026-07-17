@@ -31,6 +31,7 @@ export const auditEvents = sqliteTable("audit_events", {
 
 export const workers = sqliteTable("workers", {
   id: text("id").primaryKey(),
+  workerCode: text("worker_code").notNull().default(""),
   entryDate: text("entry_date").notNull(),
   fullName: text("full_name").notNull(),
   identityNumber: text("identity_number").notNull().unique(),
@@ -49,6 +50,7 @@ export const workers = sqliteTable("workers", {
   disabilityOrInvalidity: text("disability_or_invalidity").notNull(),
   role: text("role").notNull(),
   workSite: text("work_site").notNull(),
+  workSites: text("work_sites").notNull().default("[]"),
   contractTerm: text("contract_term").notNull(),
   agreedSalary: integer("agreed_salary").notNull(),
   afp: text("afp").notNull(),
@@ -62,6 +64,17 @@ export const workers = sqliteTable("workers", {
   emergencyRelationship: text("emergency_relationship").notNull(),
   emergencyMobile: text("emergency_mobile").notNull(),
   source: text("source").notNull().default("Individual"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const workSites = sqliteTable("work_sites", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  company: text("company").notNull().default(""),
+  client: text("client").notNull().default(""),
+  address: text("address").notNull().default(""),
+  status: text("status").notNull().default("Activa"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

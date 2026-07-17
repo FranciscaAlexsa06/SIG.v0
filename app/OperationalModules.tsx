@@ -17,6 +17,7 @@ type Worker = {
   company: string;
   costCenter: string;
   role: string;
+  workSites: string[];
 };
 
 type AttendanceRow = {
@@ -64,8 +65,11 @@ type CompanyRecord = {
   status: string;
 };
 
+export type WorkSiteRecord = { id: string; name: string; company: string; client: string; address: string; status: string };
+
 export type WorkerProfile = {
   id: string;
+  workerCode: string;
   entryDate: string;
   fullName: string;
   identityNumber: string;
@@ -84,6 +88,7 @@ export type WorkerProfile = {
   disabilityOrInvalidity: string;
   role: string;
   workSite: string;
+  workSites: string;
   contractTerm: string;
   agreedSalary: number;
   afp: string;
@@ -102,16 +107,16 @@ type WorkerField = { name: string; label: string; type?: string; optional?: bool
 
 const workerSections: { title: string; fields: WorkerField[] }[] = [
   { title: "I. ANTECEDENTES PERSONALES", fields: [
-    { name: "entryDate", label: "Fecha de Ingreso", type: "date" }, { name: "fullName", label: "Nombre Completo" }, { name: "identityNumber", label: "Cédula de identidad N°" }, { name: "birthDate", label: "Fecha de Nacimiento", type: "date" }, { name: "nationality", label: "Nacionalidad" }, { name: "gender", label: "Género", options: ["Femenino", "Masculino", "Otro", "Prefiere no informar"] }, { name: "maritalStatus", label: "Estado Civil" }, { name: "educationLevel", label: "Nivel Educacional" }, { name: "professionalTitle", label: "Título profesional (Si aplica)", optional: true }, { name: "address", label: "Dirección" }, { name: "commune", label: "Comuna" }, { name: "region", label: "Región" }, { name: "mobile", label: "N° de celular", type: "tel" }, { name: "email", label: "Correo Electrónico", type: "email" }, { name: "familyDependents", label: "Cargas familiares", type: "number", min: "0" }, { name: "disabilityOrInvalidity", label: "Discapacidad o Pensionado por Invalidez", options: ["No", "Sí"] },
+    { name: "workerCode", label: "Código del trabajador", optional: true }, { name: "entryDate", label: "Fecha de Ingreso", type: "date" }, { name: "fullName", label: "Nombre completo (nombres y luego apellidos)" }, { name: "identityNumber", label: "Cédula de identidad N°" }, { name: "birthDate", label: "Fecha de Nacimiento", type: "date" }, { name: "nationality", label: "Nacionalidad" }, { name: "gender", label: "Género", options: ["Femenino", "Masculino", "Otro", "Prefiere no informar"] }, { name: "maritalStatus", label: "Estado Civil", options: ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a", "Acuerdo de Unión Civil"] }, { name: "educationLevel", label: "Nivel Educacional", options: ["Enseñanza Básica", "Enseñanza Media", "Técnico Nivel Medio", "Técnico Nivel Superior", "Técnico Incompleto", "Universitaria", "Universitaria Incompleto"] }, { name: "professionalTitle", label: "Título profesional (Si aplica)", optional: true }, { name: "address", label: "Dirección" }, { name: "commune", label: "Comuna" }, { name: "region", label: "Región" }, { name: "mobile", label: "N° de celular", type: "tel" }, { name: "email", label: "Correo Electrónico", type: "email" }, { name: "familyDependents", label: "Cargas familiares", type: "number", min: "0" }, { name: "disabilityOrInvalidity", label: "Discapacidad o Pensionado por Invalidez", options: ["No", "Sí"] },
   ] },
   { title: "II. ANTECEDENTES LABORALES", fields: [
-    { name: "role", label: "Cargo" }, { name: "workSite", label: "Obra" }, { name: "contractTerm", label: "Plazo de contratación" }, { name: "agreedSalary", label: "Sueldo pactado", type: "number", min: "0" },
+    { name: "role", label: "Cargo" }, { name: "workSite", label: "Obras" }, { name: "contractTerm", label: "Plazo de contratación", options: ["Plazo fijo", "Indefinido", "Obra o faena"] }, { name: "agreedSalary", label: "Sueldo pactado", type: "number", min: "0" },
   ] },
   { title: "III. INFORMACIÓN PREVISIONAL Y DE SALUD", fields: [
-    { name: "afp", label: "AFP" }, { name: "health", label: "Salud" }, { name: "isaprePlan", label: "Plan Isapre (si aplica)", optional: true },
+    { name: "afp", label: "AFP", options: ["CAPITAL", "CUPRUM", "HABITAT", "PLAN VITAL", "PROVIDA", "MODELO", "UNO"] }, { name: "health", label: "Salud", options: ["FONASA", "BANMÉDICA", "COLMENA", "CONSALUD", "CRUZ BLANCA", "NUEVA MASVIDA", "ESENCIAL", "Otra"] }, { name: "isaprePlan", label: "Plan Isapre (si aplica)", optional: true },
   ] },
   { title: "IV. INFORMACIÓN BANCARIA", fields: [
-    { name: "bank", label: "Banco" }, { name: "accountType", label: "Tipo de Cuenta" }, { name: "accountNumber", label: "Número de Cuenta" }, { name: "requiresAdvance", label: "Requiere anticipo", options: ["No", "Sí"] },
+    { name: "bank", label: "Banco" }, { name: "accountType", label: "Tipo de Cuenta", options: ["Corriente", "Vista", "Rut"] }, { name: "accountNumber", label: "Número de Cuenta" }, { name: "requiresAdvance", label: "Requiere anticipo", options: ["No", "Sí"] },
   ] },
   { title: "V. CONTACTO DE EMERGENCIA", fields: [
     { name: "emergencyName", label: "Nombre Completo" }, { name: "emergencyRelationship", label: "Parentesco" }, { name: "emergencyMobile", label: "N° celular de contacto", type: "tel" },
@@ -119,6 +124,7 @@ const workerSections: { title: string; fields: WorkerField[] }[] = [
 ];
 
 const bulkWorkerColumns = [
+  ["Código", "workerCode"],
   ["Fecha de Ingreso", "entryDate"], ["Nombre Completo", "fullName"], ["Cédula de identidad N°", "identityNumber"], ["Fecha de Nacimiento", "birthDate"], ["Nacionalidad", "nationality"], ["Género", "gender"], ["Estado Civil", "maritalStatus"], ["Nivel Educacional", "educationLevel"], ["Título profesional", "professionalTitle"], ["Dirección", "address"], ["Comuna", "commune"], ["Región", "region"], ["N° de celular", "mobile"], ["Correo Electrónico", "email"], ["Cargas familiares", "familyDependents"], ["Discapacidad o Pensionado por Invalidez", "disabilityOrInvalidity"], ["Cargo", "role"], ["Obra", "workSite"], ["Plazo de contratación", "contractTerm"], ["Sueldo pactado", "agreedSalary"], ["AFP", "afp"], ["Salud", "health"], ["Plan Isapre", "isaprePlan"], ["Banco", "bank"], ["Tipo de Cuenta", "accountType"], ["Número de Cuenta", "accountNumber"], ["Requiere anticipo", "requiresAdvance"], ["Nombre Contacto de Emergencia", "emergencyName"], ["Parentesco", "emergencyRelationship"], ["N° celular de contacto", "emergencyMobile"],
 ] as const;
 
@@ -182,9 +188,25 @@ function workersFrom(processes: ProcessRecord[]) {
       company: process.company,
       costCenter: process.costCenter,
       role: process.role,
+      workSites: process.costCenter ? [process.costCenter] : [],
     });
   });
   return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
+function profileWorkSites(profile?: WorkerProfile) {
+  if (!profile) return [];
+  try {
+    const parsed = JSON.parse(profile.workSites || "[]");
+    if (Array.isArray(parsed)) { const sites = [...new Set(parsed.map(String).map((site) => site.trim()).filter(Boolean))]; if (sites.length) return sites; }
+  } catch { /* Preserve compatibility with workers saved before multiple works were enabled. */ }
+  return profile.workSite ? [profile.workSite] : [];
+}
+
+function nameParts(fullName: string) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 3) return { names: fullName, surnames: "" };
+  return { names: parts.slice(0, -2).join(" "), surnames: parts.slice(-2).join(" ") };
 }
 
 function useConnectedWorkers(processes: ProcessRecord[], refreshKey = "") {
@@ -196,7 +218,7 @@ function useConnectedWorkers(processes: ProcessRecord[], refreshKey = "") {
     fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setProfiles(data.workers ?? [])).catch(() => setProfiles([])).finally(() => setLoading(false));
   }, [refreshKey]);
   const workers = useMemo(() => {
-    const connected: Worker[] = profiles.map((profile) => ({ rut: profile.identityNumber, name: profile.fullName, role: profile.role, costCenter: profile.workSite, company: "" }));
+    const connected: Worker[] = profiles.map((profile) => { const sites = profileWorkSites(profile); return { rut: profile.identityNumber, name: profile.fullName, role: profile.role, costCenter: sites.join(" · "), workSites: sites, company: "" }; });
     processWorkers.forEach((worker) => { if (!connected.some((item) => item.rut === worker.rut)) connected.push(worker); });
     return connected.sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [profiles, processWorkers]);
@@ -261,6 +283,41 @@ function EmptyResult({ text }: { text: string }) {
   return <div className="module-empty"><span>⌕</span><strong>Sin resultados</strong><p>{text}</p></div>;
 }
 
+function WorkerProfileForm({ profile, catalog, setRoute }: { profile?: WorkerProfile; catalog: WorkSiteRecord[]; setRoute: (path: string) => void }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const currentSites = profileWorkSites(profile);
+  const siteOptions = [...new Set([...catalog.filter((site) => site.status === "Activa").map((site) => site.name), ...currentSites])].sort((a, b) => a.localeCompare(b, "es"));
+  const defaultValue = (field: WorkerField) => {
+    if (!profile) return field.name === "familyDependents" ? "0" : "";
+    const value = profile[field.name as keyof WorkerProfile];
+    if (field.name === "requiresAdvance") return value ? "Sí" : "No";
+    return String(value ?? "");
+  };
+  return <form className="worker-profile-form" onSubmit={async (event) => {
+    event.preventDefault(); setSaving(true); setError("");
+    try {
+      const form = new FormData(event.currentTarget);
+      const works = form.getAll("workSites").map(String).filter(Boolean);
+      if (!works.length) throw new Error("Selecciona al menos una obra para el trabajador.");
+      const payload: Record<string, unknown> = Object.fromEntries(form.entries());
+      payload.workSites = works; payload.workSite = works[0];
+      if (profile) payload.originalIdentityNumber = profile.identityNumber;
+      const response = await fetch("/api/workers", { method: profile ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "No fue posible guardar la información.");
+      window.alert(profile ? "Ficha del trabajador actualizada correctamente." : "Información del trabajador enviada correctamente.");
+      navigate(profile ? `/personas/resumen/${encodeURIComponent(String(payload.identityNumber))}` : "/personas", setRoute);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible guardar la información."); }
+    finally { setSaving(false); }
+  }}>
+    <section className="panel module-panel"><div className="panel-heading"><div><p className="page-eyebrow">Trabajadores</p><h2>{profile ? "Editar ficha del trabajador" : "Ingresar información de una persona"}</h2></div><span className="status-chip status-chip--draft">{profile ? "Edición" : "Nueva solicitud"}</span></div><p className="form-intro">{profile ? "Actualiza únicamente los datos necesarios. Los documentos, licencias e historial existentes se conservarán." : "Completa los antecedentes del trabajador y envíalos a la Jefa de RRHH y Finanzas."}</p></section>
+    {workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="form-grid">{section.fields.map((field) => field.name === "workSite" ? <div className="full worker-works-field" key={field.name}><span>Obras asignadas <small>Puedes seleccionar más de una</small></span>{siteOptions.length ? <div className="worker-worksite-options">{siteOptions.map((site) => <label key={site}><input type="checkbox" name="workSites" value={site} defaultChecked={currentSites.includes(site)} /><span>{site}</span></label>)}</div> : <div className="info-banner"><span>i</span><p>Primero ingresa las obras desde Administración → Obras y centros de costo.</p></div>}</div> : <label key={field.name}>{field.label}{field.options ? <select name={field.name} required={!field.optional} defaultValue={defaultValue(field)}><option value="" disabled>Seleccionar</option>{[...new Set([...(field.options ?? []), defaultValue(field)].filter(Boolean))].map((option) => <option key={option}>{option}</option>)}</select> : <input name={field.name} type={field.type ?? "text"} min={field.min} required={!field.optional} defaultValue={defaultValue(field)} />}</label>)}</div></section>)}
+    {error && <div className="form-error">{error}</div>}
+    <footer className="panel form-footer worker-submit"><button type="button" className="secondary-button" onClick={() => navigate(profile ? `/personas/resumen/${encodeURIComponent(profile.identityNumber)}` : "/personas", setRoute)}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? "Guardando…" : profile ? "Guardar cambios" : "Enviar"}</button></footer>
+  </form>;
+}
+
 export function PersonasModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
   const { workers, profiles, loading } = useConnectedWorkers(processes, route);
   const summaryRut = route.startsWith("/personas/resumen/") ? decodeURIComponent(route.slice("/personas/resumen/".length)) : "";
@@ -268,9 +325,10 @@ export function PersonasModule({ route, processes, setRoute }: { route: string; 
   const [workerMedicalLeaves, setWorkerMedicalLeaves] = useState<MedicalLeaveRecord[]>([]);
   const [activeTab, setActiveTab] = useState("Resumen");
   const [query, setQuery] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [selectedRut, setSelectedRut] = useState("");
+  const [workSiteCatalog, setWorkSiteCatalog] = useState<WorkSiteRecord[]>([]);
   const filtered = query.trim() ? workers.filter((worker) => `${worker.name} ${worker.rut}`.toLowerCase().includes(query.toLowerCase())) : [];
+  useEffect(() => { fetch("/api/work-sites").then((response) => response.ok ? response.json() : { workSites: [] }).then((data: { workSites?: WorkSiteRecord[] }) => setWorkSiteCatalog(data.workSites ?? [])).catch(() => setWorkSiteCatalog([])); }, [route]);
   useEffect(() => { if (!summaryRut) { setWorkerMedicalLeaves([]); return; } let local: MedicalLeaveRecord[] = []; try { local = (JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]") as MedicalLeaveRecord[]).filter((leave) => leave.workerRut === summaryRut); } catch { local = []; } fetch(`/api/medical-leaves?rut=${encodeURIComponent(summaryRut)}`).then((response) => response.ok ? response.json() : { medicalLeaves: [] }).then((data: { medicalLeaves?: Array<MedicalLeaveRecord & { dateFrom?: string; dateTo?: string }> }) => { const remote = (data.medicalLeaves ?? []).map((leave) => ({ ...leave, from: leave.from || leave.dateFrom || "", to: leave.to || leave.dateTo || "" })); local.forEach((leave) => { if (!remote.some((item) => item.id === leave.id)) remote.push(leave); }); setWorkerMedicalLeaves(remote); }).catch(() => setWorkerMedicalLeaves(local)); }, [summaryRut]);
 
   if (route.startsWith("/personas/resumen/")) {
@@ -278,32 +336,23 @@ export function PersonasModule({ route, processes, setRoute }: { route: string; 
     const worker = workers.find((item) => item.rut === summaryRut);
     if (loading) return <section className="panel module-panel"><div className="search-prompt"><span>○</span><strong>Cargando trabajador</strong><p>Consultando sus antecedentes registrados.</p></div></section>;
     if (!worker) return <section className="panel module-panel"><EmptyResult text="No fue posible encontrar al trabajador seleccionado." /><footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></section>;
-    const initials = worker.name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); const availableTabs = workerRecords.some((record) => record.category === "Finiquito" || record.subtype === "Finiquito") ? [...workerTabs, "Finiquito"] : workerTabs;
-    return <div className="worker-profile-summary"><section className="panel worker-identity-card"><div className="worker-photo">{initials}</div><div className="worker-identity-main"><div className="worker-badges"><span className="status-chip status-chip--secure">Activo</span><span className="status-chip">Código {profile?.id ?? "Sin código"}</span></div><h2>{worker.name}</h2><p>{worker.role || "Sin cargo informado"} <i>•</i> {worker.costCenter || "Sin obra informada"} <i>•</i> {profile?.contractTerm || "Plazo no informado"}</p><div className="worker-key-data"><div><small>RUT</small><strong>{worker.rut}</strong></div><div><small>Edad / Género</small><strong>{profile ? `${ageFrom(profile.birthDate)} · ${profile.gender || "No informado"}` : "No informado"}</strong></div><div><small>Celular</small><strong>{profile?.mobile || "No informado"}</strong></div><div><small>Correo electrónico</small><strong>{profile?.email || "No informado"}</strong></div><div className="wide"><small>Dirección</small><strong>{profile ? `${profile.address}, ${profile.commune}, ${profile.region}` : "No informada"}</strong></div></div><div className="worker-tenure"><small>Antigüedad</small><strong>{monthsBetween(profile?.entryDate ?? "")}</strong></div></div></section><nav className="worker-profile-tabs" aria-label="Secciones de la ficha">{availableTabs.map((tab) => <button key={tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>)}</nav>{activeTab === "Resumen" ? <WorkerSummary records={workerRecords} medicalLeaves={workerMedicalLeaves} /> : activeTab === "Información personal" ? (profile ? <div className="worker-profile-summary">{workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="profile-summary-grid">{section.fields.map((field) => <div key={field.name}><small>{field.label}</small><strong>{profileValue(profile, field)}</strong></div>)}</div></section>)}</div> : <section className="panel module-panel"><EmptyResult text="No existen antecedentes personales ampliados para este trabajador." /></section>) : <WorkerRecordPanel rut={summaryRut} category={activeTab} records={workerRecords} reload={reloadRecords} medicalLeaves={workerMedicalLeaves} />}<footer className="panel form-footer worker-submit"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></div>;
+    const initials = worker.name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); const availableTabs = workerRecords.some((record) => record.category === "Finiquito" || record.subtype === "Finiquito") ? [...workerTabs, "Finiquito"] : workerTabs; const displayedName = nameParts(worker.name);
+    return <div className="worker-profile-summary"><section className="panel worker-identity-card"><div className="worker-photo">{initials}</div><div className="worker-identity-main"><div className="worker-profile-top"><div className="worker-badges"><span className="status-chip status-chip--secure">Activo</span><span className="status-chip">Código {profile?.workerCode || "Sin código"}</span></div>{profile && <button className="secondary-button worker-edit-button" onClick={() => navigate(`/personas/editar/${encodeURIComponent(worker.rut)}`, setRoute)}>Editar ficha</button>}</div><h2><span>{displayedName.names}</span>{displayedName.surnames && <> <span>{displayedName.surnames}</span></>}</h2><p>{worker.role || "Sin cargo informado"} <i>•</i> {worker.costCenter || "Sin obra informada"} <i>•</i> {profile?.contractTerm || "Plazo no informado"}</p><div className="worker-key-data"><div><small>RUT</small><strong>{worker.rut}</strong></div><div><small>Edad / Género</small><strong>{profile ? `${ageFrom(profile.birthDate)} · ${profile.gender || "No informado"}` : "No informado"}</strong></div><div><small>Celular</small><strong>{profile?.mobile || "No informado"}</strong></div><div><small>Correo electrónico</small><strong>{profile?.email || "No informado"}</strong></div><div className="wide"><small>Dirección</small><strong>{profile ? `${profile.address}, ${profile.commune}, ${profile.region}` : "No informada"}</strong></div></div><div className="worker-tenure"><small>Antigüedad</small><strong>{monthsBetween(profile?.entryDate ?? "")}</strong></div></div></section><nav className="worker-profile-tabs" aria-label="Secciones de la ficha">{availableTabs.map((tab) => <button key={tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>)}</nav>{activeTab === "Resumen" ? <WorkerSummary records={workerRecords} medicalLeaves={workerMedicalLeaves} /> : activeTab === "Información personal" ? (profile ? <div className="worker-profile-summary">{workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="profile-summary-grid">{section.fields.map((field) => <div key={field.name}><small>{field.label}</small><strong>{field.name === "workSite" ? profileWorkSites(profile).join(" · ") || "—" : profileValue(profile, field)}</strong></div>)}</div></section>)}</div> : <section className="panel module-panel"><EmptyResult text="No existen antecedentes personales ampliados para este trabajador." /></section>) : <WorkerRecordPanel rut={summaryRut} category={activeTab} records={workerRecords} reload={reloadRecords} medicalLeaves={workerMedicalLeaves} />}<footer className="panel form-footer worker-submit"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></div>;
   }
 
-  if (route === "/personas/nueva-solicitud") return <form className="worker-profile-form" onSubmit={async (event) => {
-    event.preventDefault(); setSaving(true); setError("");
-    try {
-      const response = await fetch("/api/workers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget).entries())) });
-      const data = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "No fue posible enviar la información.");
-      window.alert("Información del trabajador enviada correctamente."); navigate("/personas", setRoute);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible enviar la información."); }
-    finally { setSaving(false); }
-  }}>
-    <section className="panel module-panel"><div className="panel-heading"><div><p className="page-eyebrow">Trabajadores</p><h2>Ingresar información de una persona</h2></div><span className="status-chip status-chip--draft">Nueva solicitud</span></div><p className="form-intro">Completa los antecedentes del trabajador y envíalos a la Jefa de RRHH y Finanzas.</p></section>
-    {workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="form-grid">{section.fields.map((field) => <label key={field.name}>{field.label}{field.options ? <select name={field.name} required={!field.optional} defaultValue=""><option value="" disabled>Seleccionar</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : <input name={field.name} type={field.type ?? "text"} min={field.min} required={!field.optional} defaultValue={field.name === "familyDependents" ? "0" : undefined} />}</label>)}</div></section>)}
-    {error && <div className="form-error">{error}</div>}
-    <footer className="panel form-footer worker-submit"><button type="button" className="secondary-button" onClick={() => navigate("/personas", setRoute)}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? "Enviando…" : "Enviar"}</button></footer>
-  </form>;
+  if (route === "/personas/nueva-solicitud") return <WorkerProfileForm catalog={workSiteCatalog} setRoute={setRoute} />;
+  if (route.startsWith("/personas/editar/")) {
+    const editRut = decodeURIComponent(route.slice("/personas/editar/".length)); const profile = profiles.find((item) => item.identityNumber === editRut);
+    if (loading) return <section className="panel module-panel"><div className="search-prompt"><span>○</span><strong>Cargando trabajador</strong></div></section>;
+    return profile ? <WorkerProfileForm profile={profile} catalog={workSiteCatalog} setRoute={setRoute} /> : <section className="panel module-panel"><EmptyResult text="No fue posible encontrar la ficha a editar." /></section>;
+  }
 
   return <section className="panel module-panel">
     <div className="section-actions">
       <div><p className="page-eyebrow">Trabajadores</p><h2>Buscar trabajador</h2></div>
       <button className="primary-button" onClick={() => navigate("/personas/nueva-solicitud", setRoute)}>＋ Nueva solicitud</button>
     </div>
-    <label className="worker-search"><span>Nombre o RUT del trabajador</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>
+    <div className="worker-selector-row"><label>Seleccionar trabajador<select value={selectedRut} onChange={(event) => { const rut = event.target.value; setSelectedRut(rut); if (rut) navigate(`/personas/resumen/${encodeURIComponent(rut)}`, setRoute); }}><option value="">Seleccionar trabajador</option>{workers.map((worker) => <option key={worker.rut} value={worker.rut}>{worker.name} · {worker.rut}</option>)}</select></label></div><label className="worker-search"><span>O buscar por nombre o RUT</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>
     {!query.trim() ? <div className="search-prompt"><span>○</span><strong>Busca un trabajador</strong><p>Ingresa su nombre o RUT para consultar el registro.</p></div> : filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut} · {worker.role || "Sin cargo informado"}</span><small>{[worker.company, worker.costCenter].filter(Boolean).join(" · ")}</small></div><button className="table-action" onClick={() => navigate(`/personas/resumen/${encodeURIComponent(worker.rut)}`, setRoute)}>Ver resumen →</button></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />}
   </section>;
 }
@@ -321,7 +370,7 @@ export function DocumentModule({ route, processes, setRoute }: { route: string; 
   }}>
     <div className="panel-heading"><div><p className="page-eyebrow">Gestión Documental</p><h2>{selectedType}</h2></div><span className="status-chip status-chip--draft">Nueva solicitud</span></div>
     <div className="form-grid">
-      <label className="full">Trabajador<input name="worker" list="document-workers" required placeholder="Buscar por nombre o RUT" /><datalist id="document-workers">{workers.map((worker) => <option key={worker.rut} value={`${worker.name} · ${worker.rut}`} />)}</datalist></label>
+      <label className="full">Trabajador<select name="worker" required defaultValue=""><option value="" disabled>Seleccionar trabajador</option>{workers.map((worker) => <option key={worker.rut} value={`${worker.name} · ${worker.rut}`}>{worker.name} · {worker.rut}</option>)}</select></label>
       <label>Fecha de solicitud<input name="date" type="date" defaultValue={localDate()} required /></label>
       <label>Fecha de vigencia<input name="effectiveDate" type="date" /></label>
       <label className="full">Antecedentes de la solicitud<input name="detail" required placeholder="Indica la información necesaria para preparar el documento" /></label>
@@ -342,7 +391,7 @@ function defaultRow(): AttendanceRow {
 
 export function AttendanceModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
   const { workers } = useConnectedWorkers(processes);
-  const costCenters = useMemo(() => [...new Set(workers.map((worker) => worker.costCenter).filter(Boolean))], [workers]);
+  const costCenters = useMemo(() => [...new Set(workers.flatMap((worker) => worker.workSites).filter(Boolean))], [workers]);
   const [date, setDate] = useState(localDate());
   const [scope, setScope] = useState("all");
   const [costCenter, setCostCenter] = useState("");
@@ -355,7 +404,7 @@ export function AttendanceModule({ route, processes, setRoute }: { route: string
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(localDate().slice(0, 7));
-  const visibleWorkers = scope === "all" ? workers : workers.filter((worker) => worker.costCenter === costCenter);
+  const visibleWorkers = scope === "all" ? workers : workers.filter((worker) => worker.workSites.includes(costCenter));
 
   function rowFor(rut: string) { return rows[rut] ?? defaultRow(); }
   function updateRow(rut: string, update: Partial<AttendanceRow>) { setRows((current) => ({ ...current, [rut]: { ...rowFor(rut), ...update } })); }
@@ -395,7 +444,7 @@ export function VacationsModule({ route, processes, setRoute }: { route: string;
   const routeWorker = workers.find((worker) => worker.rut === routeRut);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Worker | null>(null);
-  const [requestWorker, setRequestWorker] = useState(routeWorker ? `${routeWorker.name} · ${routeWorker.rut}` : "");
+  const [requestWorker, setRequestWorker] = useState(routeWorker?.rut ?? "");
   const filtered = query.trim() ? workers.filter((worker) => `${worker.name} ${worker.rut}`.toLowerCase().includes(query.toLowerCase())) : [];
 
   if (route.startsWith("/vacaciones/nueva-solicitud")) return <form className="panel process-form" onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -404,14 +453,14 @@ export function VacationsModule({ route, processes, setRoute }: { route: string;
     sessionStorage.setItem(`sig-vacation-request-${Date.now()}`, JSON.stringify(values));
     window.alert("Solicitud de vacaciones enviada correctamente.");
     navigate("/vacaciones", setRoute);
-  }}><div className="panel-heading"><div><p className="page-eyebrow">Vacaciones</p><h2>Nueva solicitud</h2></div><span className="status-chip status-chip--draft">Solicitud</span></div><div className="form-grid"><label className="full">Trabajador<input name="worker" list="vacation-workers" value={requestWorker} onChange={(event) => setRequestWorker(event.target.value)} required placeholder="Buscar o modificar trabajador" /><datalist id="vacation-workers">{workers.map((worker) => <option key={worker.rut} value={`${worker.name} · ${worker.rut}`} />)}</datalist></label><label>Desde<input name="from" type="date" required /></label><label>Hasta<input name="to" type="date" required /></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/vacaciones", setRoute)}>Cancelar</button><button className="primary-button">Enviar solicitud</button></footer></form>;
+  }}><div className="panel-heading"><div><p className="page-eyebrow">Vacaciones</p><h2>Nueva solicitud</h2></div><span className="status-chip status-chip--draft">Solicitud</span></div><div className="form-grid"><label className="full">Trabajador<select name="worker" value={requestWorker} onChange={(event) => setRequestWorker(event.target.value)} required><option value="">Seleccionar trabajador</option>{workers.map((worker) => <option key={worker.rut} value={worker.rut}>{worker.name} · {worker.rut}</option>)}</select></label><label>Desde<input name="from" type="date" required /></label><label>Hasta<input name="to" type="date" required /></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/vacaciones", setRoute)}>Cancelar</button><button className="primary-button">Enviar solicitud</button></footer></form>;
 
   return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Vacaciones</p><h2>Buscar trabajador</h2></div><button className="primary-button" onClick={() => navigate(selected ? `/vacaciones/nueva-solicitud/${encodeURIComponent(selected.rut)}` : "/vacaciones/nueva-solicitud", setRoute)}>＋ Nueva solicitud</button></div><label className="worker-search"><span>Nombre o RUT del trabajador</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>{selected && <div className="selected-worker"><div className="worker-avatar">{selected.name.slice(0, 1)}</div><div><small>Trabajador seleccionado</small><strong>{selected.name}</strong><span>{selected.rut} · {selected.costCenter}</span></div><button className="table-action" onClick={() => setSelected(null)}>Cambiar</button></div>}{query.trim() && !selected && (filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut}</span><small>{worker.company} · {worker.costCenter}</small></div><button className="table-action" onClick={() => { setSelected(worker); setQuery(worker.name); }}>Seleccionar</button></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />)}{!query.trim() && !selected && <div className="search-prompt"><span>☼</span><strong>Selecciona un trabajador</strong><p>Busca por nombre o RUT para revisar y crear solicitudes.</p></div>}</section>;
 }
 
 export function MedicalLeaveModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
   const { workers } = useConnectedWorkers(processes);
-  const costCenters = useMemo(() => [...new Set(workers.map((worker) => worker.costCenter).filter(Boolean))], [workers]);
+  const costCenters = useMemo(() => [...new Set(workers.flatMap((worker) => worker.workSites).filter(Boolean))], [workers]);
   const [records, setRecords] = useState<MedicalLeaveRecord[]>([]);
   const [workerFilter, setWorkerFilter] = useState("");
   const [centerFilter, setCenterFilter] = useState("");
@@ -434,7 +483,7 @@ export function MedicalLeaveModule({ route, processes, setRoute }: { route: stri
 
   const filtered = records.filter((record) => {
     const matchesWorker = !workerFilter || record.workerRut === workerFilter;
-    const matchesCenter = !centerFilter || record.costCenter === centerFilter;
+    const matchesCenter = !centerFilter || record.costCenter.split(" · ").includes(centerFilter);
     const monthStart = `${monthFilter}-01`;
     const monthEnd = `${monthFilter}-31`;
     return matchesWorker && matchesCenter && (!monthFilter || (record.from <= monthEnd && record.to >= monthStart));
@@ -484,6 +533,19 @@ export function CompaniesModule({ route, setRoute }: { route: string; setRoute: 
   }}><div className="panel-heading"><div><p className="page-eyebrow">Administración</p><h2>Ingresar empresa</h2></div><span className="status-chip status-chip--draft">Nueva empresa</span></div><div className="form-grid"><label>Razón social<input name="legalName" required /></label><label>RUT de la empresa<input name="rut" required placeholder="76.123.456-7" /></label><label>Nombre de fantasía<input name="tradeName" /></label><label>Representante legal<input name="representative" required /></label><label className="full">Dirección<input name="address" required /></label><label>Estado<select name="status"><option>Activa</option><option>Inactiva</option></select></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/administracion/empresas", setRoute)}>Cancelar</button><button className="primary-button">Guardar empresa</button></footer></form>;
 
   return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Administración</p><h2>Empresas</h2></div><button className="primary-button" onClick={() => navigate("/administracion/empresas/nueva", setRoute)}>＋ Ingresar empresa</button></div>{companies.length ? <div className="table-wrap"><table><thead><tr><th>Razón social</th><th>RUT</th><th>Nombre de fantasía</th><th>Representante</th><th>Estado</th></tr></thead><tbody>{companies.map((company) => <tr key={company.id}><td>{company.legalName}</td><td>{company.rut}</td><td>{company.tradeName || "—"}</td><td>{company.representative}</td><td><span className="status-chip">{company.status}</span></td></tr>)}</tbody></table></div> : <EmptyResult text="No existen empresas ingresadas." />}<footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/administracion", setRoute)}>← Volver a Administración</button></footer></section>;
+}
+
+export function WorkSitesModule({ route, setRoute }: { route: string; setRoute: (path: string) => void }) {
+  const [workSites, setWorkSites] = useState<WorkSiteRecord[]>([]);
+  const [error, setError] = useState("");
+  const load = () => fetch("/api/work-sites").then((response) => response.ok ? response.json() : { workSites: [] }).then((data: { workSites?: WorkSiteRecord[] }) => setWorkSites(data.workSites ?? [])).catch(() => setWorkSites([]));
+  useEffect(() => { load(); }, []);
+  if (route === "/administracion/obras-y-centros-de-costo/nueva") return <form className="panel process-form" onSubmit={async (event) => {
+    event.preventDefault(); setError("");
+    try { const response = await fetch("/api/work-sites", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget).entries())) }); const data = await response.json() as { error?: string }; if (!response.ok) throw new Error(data.error ?? "No fue posible guardar la obra."); window.alert("Obra ingresada correctamente."); navigate("/administracion/obras-y-centros-de-costo", setRoute); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible guardar la obra."); }
+  }}><div className="panel-heading"><div><p className="page-eyebrow">Administración</p><h2>Ingresar obra o centro de costo</h2></div><span className="status-chip status-chip--draft">Nueva obra</span></div><div className="form-grid"><label>Nombre de la obra<input name="name" required /></label><label>Empresa<input name="company" /></label><label>Cliente<input name="client" /></label><label>Estado<select name="status"><option>Activa</option><option>Inactiva</option></select></label><label className="full">Dirección<input name="address" /></label></div>{error && <div className="form-error">{error}</div>}<footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/administracion/obras-y-centros-de-costo", setRoute)}>Cancelar</button><button className="primary-button">Guardar obra</button></footer></form>;
+  return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Administración</p><h2>Obras y centros de costo</h2></div><button className="primary-button" onClick={() => navigate("/administracion/obras-y-centros-de-costo/nueva", setRoute)}>＋ Ingresar obra</button></div>{workSites.length ? <div className="table-wrap"><table><thead><tr><th>Obra</th><th>Empresa</th><th>Cliente</th><th>Dirección</th><th>Estado</th></tr></thead><tbody>{workSites.map((site) => <tr key={site.id}><td>{site.name}</td><td>{site.company || "—"}</td><td>{site.client || "—"}</td><td>{site.address || "—"}</td><td><span className="status-chip">{site.status}</span></td></tr>)}</tbody></table></div> : <EmptyResult text="No existen obras ingresadas." />}<footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/administracion", setRoute)}>← Volver a Administración</button></footer></section>;
 }
 
 export function BulkWorkersModule({ setRoute }: { setRoute: (path: string) => void }) {

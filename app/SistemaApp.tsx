@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { AttendanceModule, BulkWorkersModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, type MedicalLeaveRecord, type WorkerProfile } from "./OperationalModules";
+import { AttendanceModule, BulkWorkersModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, WorkSitesModule, type MedicalLeaveRecord, type WorkerProfile } from "./OperationalModules";
 
 type ProcessRecord = {
   id: string;
@@ -101,7 +101,7 @@ function Login({ onLogin }: { onLogin: (name: string) => void }) {
 
   return (
     <main className="login-page">
-      <section className="login-hero" aria-label="Portada del Sistema Integral de Gestión" />
+      <section className="login-hero" aria-label="Portada del Sistema Integral de Gestión"><img src="/login-cover-v2.png" alt="Sistema Integral de Gestión" /></section>
       <section className="login-panel">
         <form className="login-card" onSubmit={submit}>
           <div className="brand-mark"><span>SIG</span></div>
@@ -258,6 +258,7 @@ function GenericModule({ route, setRoute, processes }: { route: string; setRoute
   if (route.startsWith("/licencias")) return <MedicalLeaveModule route={route} processes={processes} setRoute={setRoute} />;
   if (route === "/administracion/carga-masiva-de-trabajadores") return <BulkWorkersModule setRoute={setRoute} />;
   if (route.startsWith("/administracion/empresas")) return <CompaniesModule route={route} setRoute={setRoute} />;
+  if (route.startsWith("/administracion/obras-y-centros-de-costo")) return <WorkSitesModule route={route} setRoute={setRoute} />;
   if (route === "/bandeja") return <section className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Prioridad y vencimiento</p><h2>Mis tareas</h2></div><span className="count-badge">{processes.length} tareas</span></div>{processes.length ? <div className="record-list">{processes.map((p) => <article key={p.id}><span className="record-icon">✓</span><div><small>Nueva contratación</small><strong>{p.personName}</strong><p>{p.stage} · {p.costCenter}</p></div><span className="status-chip">{p.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute)}>Continuar</button></article>)}</div> : <EmptyTable columns={["Tarea", "Trabajador", "Responsable", "Fecha límite", "Prioridad", "Estado", "Acción"]} message="No tienes tareas pendientes." />}</section>;
 
   if (route === "/procesos") return <section className="panel"><div className="section-actions"><div><p className="page-eyebrow">Todos los flujos</p><h2>Procesos</h2></div><button className="primary-button" onClick={() => go("/procesos/nueva-contratacion", setRoute)}>＋ Nueva contratación</button></div><Toolbar><select><option>Todos los tipos</option><option>Nueva contratación</option><option>Anexo</option><option>Finiquito</option></select></Toolbar>{processes.length ? <div className="record-list">{processes.map((p) => <article key={p.id}><span className="record-icon">↻</span><div><small>{p.id}</small><strong>{p.type} · {p.personName}</strong><p>{p.company} · {p.costCenter} · {p.stage}</p></div><span className="status-chip">{p.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute)}>Abrir</button></article>)}</div> : <EmptyTable columns={["Proceso", "Trabajador", "Solicitante", "Responsable", "Etapa", "Fecha límite", "Estado", "Acciones"]} message="No hay procesos registrados." />}</section>;

@@ -1,8 +1,9 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { auditEvents, workers } from "../../../db/schema";
 
 type WorkerPayload = {
+  workerCode?: string;
   entryDate?: string;
   fullName?: string;
   identityNumber?: string;
@@ -21,6 +22,7 @@ type WorkerPayload = {
   disabilityOrInvalidity?: string;
   role?: string;
   workSite?: string;
+  workSites?: string[] | string;
   contractTerm?: string;
   agreedSalary?: string | number;
   afp?: string;
@@ -35,15 +37,42 @@ type WorkerPayload = {
   emergencyMobile?: string;
 };
 
-const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "fullName", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "workSite", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
+const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "fullName", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
+
+function missingRequired(payload: WorkerPayload) { return requiredKeys.some((key) => !clean(payload[key])) || cleanWorkSites(payload).length === 0; }
 
 function clean(value: unknown) { return String(value ?? "").trim(); }
 
+function cleanWorkSites(payload: WorkerPayload) {
+  const raw = Array.isArray(payload.workSites) ? payload.workSites : clean(payload.workSites).split(/[|,]/);
+  const sites = raw.map(clean).filter(Boolean);
+  if (!sites.length && clean(payload.workSite)) sites.push(clean(payload.workSite));
+  return [...new Set(sites)];
+}
+
 function workerValues(payload: WorkerPayload, source: string) {
+  const sites = cleanWorkSites(payload);
   return {
     id: `TRA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-    entryDate: clean(payload.entryDate), fullName: clean(payload.fullName), identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: clean(payload.workSite), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
+    workerCode: clean(payload.workerCode),
+    entryDate: clean(payload.entryDate), fullName: clean(payload.fullName), identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
   };
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json() as WorkerPayload & { originalIdentityNumber?: string };
+    const originalIdentityNumber = clean(body.originalIdentityNumber || body.identityNumber);
+    if (!originalIdentityNumber) return Response.json({ error: "No se indicó el trabajador a editar." }, { status: 400 });
+    if (missingRequired(body)) return Response.json({ error: "Faltan datos obligatorios." }, { status: 400 });
+    const { id: _newId, ...updates } = workerValues(body, "Edición individual");
+    const [record] = await getDb().update(workers).set({ ...updates, updatedAt: new Date().toISOString() }).where(eq(workers.identityNumber, originalIdentityNumber)).returning();
+    if (!record) return Response.json({ error: "No fue posible encontrar al trabajador." }, { status: 404 });
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: "Edición de ficha", recordId: record.id, detail: `Ficha actualizada sin eliminar antecedentes: ${record.fullName}` });
+    return Response.json({ worker: record });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "No fue posible editar al trabajador." }, { status: 500 });
+  }
 }
 
 export async function GET() {
@@ -57,7 +86,7 @@ export async function POST(request: Request) {
     const payloads: WorkerPayload[] = "workers" in body ? body.workers ?? [] : [body as WorkerPayload];
     if (!payloads.length) return Response.json({ error: "No hay trabajadores para ingresar." }, { status: 400 });
     if (payloads.length > 2000) return Response.json({ error: "La carga admite hasta 2.000 trabajadores por archivo." }, { status: 400 });
-    const invalid = payloads.findIndex((payload) => requiredKeys.some((key) => !clean(payload[key])));
+    const invalid = payloads.findIndex(missingRequired);
     if (invalid >= 0) return Response.json({ error: `Faltan datos obligatorios en el registro ${invalid + 1}.` }, { status: 400 });
     const db = getDb();
     const saved = [];
