@@ -47,7 +47,12 @@ export type MedicalLeaveRecord = {
   days: number;
   folio: string;
   specialty: string;
+  status?: string;
+  fileName?: string;
+  fileKey?: string;
 };
+
+type WorkerRecord = { id: string; workerRut: string; category: string; subtype: string; title: string; issueDate: string; expiryDate: string; status: string; detail: string; metadata: string; fileName: string; fileKey: string; createdAt: string };
 
 type CompanyRecord = {
   id: string;
@@ -66,6 +71,7 @@ export type WorkerProfile = {
   identityNumber: string;
   birthDate: string;
   nationality: string;
+  gender: string;
   maritalStatus: string;
   educationLevel: string;
   professionalTitle: string;
@@ -96,7 +102,7 @@ type WorkerField = { name: string; label: string; type?: string; optional?: bool
 
 const workerSections: { title: string; fields: WorkerField[] }[] = [
   { title: "I. ANTECEDENTES PERSONALES", fields: [
-    { name: "entryDate", label: "Fecha de Ingreso", type: "date" }, { name: "fullName", label: "Nombre Completo" }, { name: "identityNumber", label: "Cédula de identidad N°" }, { name: "birthDate", label: "Fecha de Nacimiento", type: "date" }, { name: "nationality", label: "Nacionalidad" }, { name: "maritalStatus", label: "Estado Civil" }, { name: "educationLevel", label: "Nivel Educacional" }, { name: "professionalTitle", label: "Título profesional (Si aplica)", optional: true }, { name: "address", label: "Dirección" }, { name: "commune", label: "Comuna" }, { name: "region", label: "Región" }, { name: "mobile", label: "N° de celular", type: "tel" }, { name: "email", label: "Correo Electrónico", type: "email" }, { name: "familyDependents", label: "Cargas familiares", type: "number", min: "0" }, { name: "disabilityOrInvalidity", label: "Discapacidad o Pensionado por Invalidez", options: ["No", "Sí"] },
+    { name: "entryDate", label: "Fecha de Ingreso", type: "date" }, { name: "fullName", label: "Nombre Completo" }, { name: "identityNumber", label: "Cédula de identidad N°" }, { name: "birthDate", label: "Fecha de Nacimiento", type: "date" }, { name: "nationality", label: "Nacionalidad" }, { name: "gender", label: "Género", options: ["Femenino", "Masculino", "Otro", "Prefiere no informar"] }, { name: "maritalStatus", label: "Estado Civil" }, { name: "educationLevel", label: "Nivel Educacional" }, { name: "professionalTitle", label: "Título profesional (Si aplica)", optional: true }, { name: "address", label: "Dirección" }, { name: "commune", label: "Comuna" }, { name: "region", label: "Región" }, { name: "mobile", label: "N° de celular", type: "tel" }, { name: "email", label: "Correo Electrónico", type: "email" }, { name: "familyDependents", label: "Cargas familiares", type: "number", min: "0" }, { name: "disabilityOrInvalidity", label: "Discapacidad o Pensionado por Invalidez", options: ["No", "Sí"] },
   ] },
   { title: "II. ANTECEDENTES LABORALES", fields: [
     { name: "role", label: "Cargo" }, { name: "workSite", label: "Obra" }, { name: "contractTerm", label: "Plazo de contratación" }, { name: "agreedSalary", label: "Sueldo pactado", type: "number", min: "0" },
@@ -113,7 +119,7 @@ const workerSections: { title: string; fields: WorkerField[] }[] = [
 ];
 
 const bulkWorkerColumns = [
-  ["Fecha de Ingreso", "entryDate"], ["Nombre Completo", "fullName"], ["Cédula de identidad N°", "identityNumber"], ["Fecha de Nacimiento", "birthDate"], ["Nacionalidad", "nationality"], ["Estado Civil", "maritalStatus"], ["Nivel Educacional", "educationLevel"], ["Título profesional", "professionalTitle"], ["Dirección", "address"], ["Comuna", "commune"], ["Región", "region"], ["N° de celular", "mobile"], ["Correo Electrónico", "email"], ["Cargas familiares", "familyDependents"], ["Discapacidad o Pensionado por Invalidez", "disabilityOrInvalidity"], ["Cargo", "role"], ["Obra", "workSite"], ["Plazo de contratación", "contractTerm"], ["Sueldo pactado", "agreedSalary"], ["AFP", "afp"], ["Salud", "health"], ["Plan Isapre", "isaprePlan"], ["Banco", "bank"], ["Tipo de Cuenta", "accountType"], ["Número de Cuenta", "accountNumber"], ["Requiere anticipo", "requiresAdvance"], ["Nombre Contacto de Emergencia", "emergencyName"], ["Parentesco", "emergencyRelationship"], ["N° celular de contacto", "emergencyMobile"],
+  ["Fecha de Ingreso", "entryDate"], ["Nombre Completo", "fullName"], ["Cédula de identidad N°", "identityNumber"], ["Fecha de Nacimiento", "birthDate"], ["Nacionalidad", "nationality"], ["Género", "gender"], ["Estado Civil", "maritalStatus"], ["Nivel Educacional", "educationLevel"], ["Título profesional", "professionalTitle"], ["Dirección", "address"], ["Comuna", "commune"], ["Región", "region"], ["N° de celular", "mobile"], ["Correo Electrónico", "email"], ["Cargas familiares", "familyDependents"], ["Discapacidad o Pensionado por Invalidez", "disabilityOrInvalidity"], ["Cargo", "role"], ["Obra", "workSite"], ["Plazo de contratación", "contractTerm"], ["Sueldo pactado", "agreedSalary"], ["AFP", "afp"], ["Salud", "health"], ["Plan Isapre", "isaprePlan"], ["Banco", "bank"], ["Tipo de Cuenta", "accountType"], ["Número de Cuenta", "accountNumber"], ["Requiere anticipo", "requiresAdvance"], ["Nombre Contacto de Emergencia", "emergencyName"], ["Parentesco", "emergencyRelationship"], ["N° celular de contacto", "emergencyMobile"],
 ] as const;
 
 function csvCells(line: string, separator: string) {
@@ -205,6 +211,46 @@ function profileValue(profile: WorkerProfile, field: WorkerField) {
   return String(value ?? "") || "—";
 }
 
+const workerTabs = ["Resumen", "Información personal", "Documentación laboral", "Documentación personal", "Asistencia", "Vacaciones", "Licencias médicas", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial"];
+const recordTypes: Record<string, string[]> = {
+  "Documentación laboral": ["Contrato", "Anexo", "Ingreso a la DT", "IRL", "RIOHS", "Finiquito", "Otro documento laboral"],
+  "Documentación personal": ["Cédula de identidad", "Certificado AFP", "Certificado de salud", "Antecedentes", "Licencia de conducir", "Otro documento personal"],
+  Asistencia: ["Libro de asistencia", "Declaración jurada", "Otro respaldo de asistencia"],
+  Vacaciones: ["Solicitud de vacaciones", "Comprobante", "Documento firmado", "Otro respaldo de vacaciones"],
+  "Licencias médicas": ["Respaldo de licencia médica"],
+  "Asignación empresa": ["Notebook", "Teléfono", "Tablet", "Radio", "Vehículo", "Herramientas", "EPP", "Credencial", "Uniforme", "Otro equipo"],
+  "Certificaciones / Cursos": ["Curso", "Certificación", "Equipo o maquinaria autorizada", "Licencia habilitante", "Otro respaldo"],
+  Exámenes: ["Examen ocupacional", "Seguro", "Evaluación", "Otro respaldo"],
+  Observaciones: ["General", "RRHH", "Gerencia", "Confidencial", "Sensible"],
+  Finiquito: ["Finiquito", "Reserva de derechos", "Reclamo DT", "Otro reclamo"],
+};
+
+function metadataOf(record?: WorkerRecord) { try { return JSON.parse(record?.metadata || "{}"); } catch { return {}; } }
+function fileUrl(key: string) { return `/api/worker-records/file?key=${encodeURIComponent(key)}`; }
+function monthsBetween(date: string) { if (!date) return "Sin fecha de ingreso"; const start = new Date(`${date}T12:00:00`); const now = new Date(); const total = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth()); return `${Math.floor(total / 12)} años y ${total % 12} meses`; }
+function ageFrom(date: string) { if (!date) return "—"; const birth = new Date(`${date}T12:00:00`); const now = new Date(); let age = now.getFullYear() - birth.getFullYear(); if (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate())) age -= 1; return `${age} años`; }
+
+function useWorkerRecords(rut: string) {
+  const [records, setRecords] = useState<WorkerRecord[]>([]); const [loading, setLoading] = useState(false); const [version, setVersion] = useState(0);
+  useEffect(() => { if (!rut) { setRecords([]); return; } setLoading(true); fetch(`/api/worker-records?rut=${encodeURIComponent(rut)}`).then((response) => response.ok ? response.json() : { records: [] }).then((data: { records?: WorkerRecord[] }) => setRecords(data.records ?? [])).catch(() => setRecords([])).finally(() => setLoading(false)); }, [rut, version]);
+  return { records, loading, reload: () => setVersion((value) => value + 1) };
+}
+
+function WorkerRecordPanel({ rut, category, records, reload, medicalLeaves = [] }: { rut: string; category: string; records: WorkerRecord[]; reload: () => void; medicalLeaves?: MedicalLeaveRecord[] }) {
+  const [saving, setSaving] = useState(false); const [error, setError] = useState("");
+  const categoryRecords = category === "Historial" ? records : records.filter((record) => record.category === category || (category === "Finiquito" && record.subtype === "Finiquito"));
+  if (category === "Historial") return <section className="panel worker-tab-panel"><div className="panel-heading"><div><p className="page-eyebrow">Trazabilidad</p><h2>Historial del trabajador</h2></div></div>{categoryRecords.length || medicalLeaves.length ? <div className="worker-timeline">{[...categoryRecords.map((record) => ({ id: record.id, date: record.createdAt, title: `${record.category} · ${record.subtype}`, detail: record.detail || record.status })), ...medicalLeaves.map((record) => ({ id: record.id, date: record.from, title: `Licencia médica · Folio ${record.folio}`, detail: `${record.days} días · ${record.status ?? "Registrada"}` }))].sort((a, b) => b.date.localeCompare(a.date)).map((event) => <article key={event.id}><span /><div><small>{new Date(event.date).toLocaleDateString("es-CL")}</small><strong>{event.title}</strong><p>{event.detail}</p></div></article>)}</div> : <EmptyResult text="No existen eventos registrados para este trabajador." />}</section>;
+  return <section className="panel worker-tab-panel"><div className="panel-heading"><div><p className="page-eyebrow">Ficha del trabajador</p><h2>{category}</h2></div></div>{category === "Licencias médicas" && (medicalLeaves.length ? <div className="table-wrap"><table><thead><tr><th>Folio</th><th>Desde</th><th>Hasta</th><th>Días</th><th>Estado</th><th>Respaldo</th></tr></thead><tbody>{medicalLeaves.map((leave) => <tr key={leave.id}><td>{leave.folio}</td><td>{leave.from}</td><td>{leave.to}</td><td>{leave.days}</td><td>{leave.status ?? "Registrada"}</td><td>{leave.fileKey ? <button className="table-action" onClick={() => window.open(fileUrl(leave.fileKey!), "_blank")}>Descargar</button> : "Pendiente"}</td></tr>)}</tbody></table></div> : <EmptyResult text="No existen licencias médicas registradas para este trabajador." />)}{category !== "Licencias médicas" && (categoryRecords.length ? <div className="table-wrap"><table><thead><tr><th>Tipo</th><th>Fecha</th><th>Vencimiento</th><th>Estado</th><th>Detalle</th><th>Respaldo</th></tr></thead><tbody>{categoryRecords.map((record) => <tr key={record.id}><td>{record.subtype}</td><td>{record.issueDate || "—"}</td><td>{record.expiryDate || "No aplica"}</td><td><span className="status-chip">{record.status}</span></td><td>{record.detail || "—"}</td><td>{record.fileKey ? <button className="table-action" onClick={() => window.open(fileUrl(record.fileKey), "_blank")}>Descargar</button> : "Sin archivo"}</td></tr>)}</tbody></table></div> : <EmptyResult text={`No existen registros en ${category.toLowerCase()}.`} />)}<form className="worker-record-form" onSubmit={async (event) => { event.preventDefault(); setSaving(true); setError(""); try { const form = new FormData(event.currentTarget); form.set("workerRut", rut); form.set("category", category); const meta = Object.fromEntries([...form.entries()].filter(([key]) => key.startsWith("meta-")).map(([key, value]) => [key.slice(5), String(value)])); form.set("metadata", JSON.stringify(meta)); const response = await fetch("/api/worker-records", { method: "POST", body: form }); const data = await response.json() as { error?: string }; if (!response.ok) throw new Error(data.error ?? "No fue posible guardar el registro."); event.currentTarget.reset(); reload(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible guardar el registro."); } finally { setSaving(false); } }}><h3>Agregar registro o respaldo</h3><div className="form-grid"><label>Tipo<select name="subtype" required><option value="">Seleccionar</option>{(recordTypes[category] ?? ["Registro"]).map((type) => <option key={type}>{type}</option>)}</select></label><label>Fecha<input type="date" name="issueDate" /></label><label>Fecha de vencimiento<input type="date" name="expiryDate" /></label><label>Estado<select name="status"><option>Vigente</option><option>Pendiente de firma</option><option>Pendiente de cargar</option><option>Por vencer</option><option>Vencido</option><option>Observado</option></select></label>{category === "Asistencia" && <><label>Porcentaje mensual<input name="meta-percentage" type="number" min="0" max="100" /></label><label>Días de inasistencia<input name="meta-absences" type="number" min="0" /></label><label>Días de vacaciones<input name="meta-vacationDays" type="number" min="0" /></label><label>Días con licencia<input name="meta-leaveDays" type="number" min="0" /></label></>}{category === "Vacaciones" && <><label>Períodos tomados<input name="meta-periodsTaken" type="number" min="0" /></label><label>Documentos pendientes<input name="meta-pendingDocuments" type="number" min="0" /></label></>}<label className="full">Detalle<input name="detail" placeholder={category === "Observaciones" ? "Escribe la observación" : "Descripción, equipo, curso, examen o antecedente"} /></label><label className="full">Respaldo opcional<input name="file" type="file" /></label></div>{error && <div className="form-error">{error}</div>}<footer className="form-footer"><button className="primary-button" disabled={saving}>{saving ? "Guardando…" : "Guardar registro"}</button></footer></form></section>;
+}
+
+function WorkerSummary({ records, medicalLeaves }: { records: WorkerRecord[]; medicalLeaves: MedicalLeaveRecord[] }) {
+  const currentMonth = localDate().slice(0, 7); const labor = records.filter((record) => record.category === "Documentación laboral"); const personal = records.filter((record) => record.category === "Documentación personal"); const attendance = records.find((record) => record.category === "Asistencia" && record.issueDate.startsWith(currentMonth)); const attendanceMeta = metadataOf(attendance); const vacations = records.filter((record) => record.category === "Vacaciones"); const vacationMeta = metadataOf(vacations[0]); const assignments = records.filter((record) => record.category === "Asignación empresa"); const certifications = records.filter((record) => record.category === "Certificaciones / Cursos"); const exams = records.filter((record) => record.category === "Exámenes"); const soon = records.filter((record) => record.expiryDate && record.expiryDate >= localDate() && record.expiryDate <= endDate(localDate(), 30)).length; const monthLeaves = medicalLeaves.filter((leave) => leave.from.slice(0, 7) === currentMonth || leave.to.slice(0, 7) === currentMonth); const pendingVacationDocs = Number(vacationMeta.pendingDocuments ?? vacations.filter((record) => record.status.startsWith("Pendiente")).length);
+  const cards = [{ title: "Contratos y anexos", value: `${Math.min(100, Math.round(labor.length / 2 * 100))}%`, note: `${labor.length} documentos cargados` }, { title: "Cumplimiento personal", value: `${Math.min(100, Math.round(personal.length / 5 * 100))}%`, note: soon ? `${soon} documento(s) por vencer` : "Sin vencimientos próximos" }, { title: "Asistencia del mes", value: `${attendanceMeta.percentage ?? 0}%`, note: `${attendanceMeta.absences ?? 0} inasistencia(s) · ${attendanceMeta.vacationDays ?? 0} vacaciones · ${attendanceMeta.leaveDays ?? monthLeaves.reduce((sum, leave) => sum + leave.days, 0)} licencia` }, { title: "Vacaciones", value: `${vacationMeta.periodsTaken ?? 0} períodos`, note: `${pendingVacationDocs} documento(s) pendientes` }, { title: "Asignación empresa", value: String(assignments.length), note: assignments.map((record) => record.subtype).join(", ") || "Sin equipos asignados" }, { title: "Certificaciones / Cursos", value: String(certifications.length), note: "Cursos y equipos autorizados" }, { title: "Exámenes", value: String(exams.length), note: "Exámenes y seguros registrados" }];
+  const finiquito = records.find((record) => record.category === "Finiquito" || record.subtype === "Finiquito");
+  if (finiquito) cards.push({ title: "Finiquito", value: finiquito.issueDate || "Registrado", note: finiquito.detail || "Revisa reserva de derechos y reclamos en su pestaña" });
+  return <section className="worker-summary-grid">{cards.map((card) => <article className="panel" key={card.title}><small>{card.title}</small><strong>{card.value}</strong><p>{card.note}</p></article>)}</section>;
+}
+
 function navigate(path: string, setRoute: (path: string) => void) {
   window.history.pushState({}, "", path);
   setRoute(path);
@@ -217,18 +263,23 @@ function EmptyResult({ text }: { text: string }) {
 
 export function PersonasModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
   const { workers, profiles, loading } = useConnectedWorkers(processes, route);
+  const summaryRut = route.startsWith("/personas/resumen/") ? decodeURIComponent(route.slice("/personas/resumen/".length)) : "";
+  const { records: workerRecords, reload: reloadRecords } = useWorkerRecords(summaryRut);
+  const [workerMedicalLeaves, setWorkerMedicalLeaves] = useState<MedicalLeaveRecord[]>([]);
+  const [activeTab, setActiveTab] = useState("Resumen");
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const filtered = query.trim() ? workers.filter((worker) => `${worker.name} ${worker.rut}`.toLowerCase().includes(query.toLowerCase())) : [];
+  useEffect(() => { if (!summaryRut) { setWorkerMedicalLeaves([]); return; } let local: MedicalLeaveRecord[] = []; try { local = (JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]") as MedicalLeaveRecord[]).filter((leave) => leave.workerRut === summaryRut); } catch { local = []; } fetch(`/api/medical-leaves?rut=${encodeURIComponent(summaryRut)}`).then((response) => response.ok ? response.json() : { medicalLeaves: [] }).then((data: { medicalLeaves?: Array<MedicalLeaveRecord & { dateFrom?: string; dateTo?: string }> }) => { const remote = (data.medicalLeaves ?? []).map((leave) => ({ ...leave, from: leave.from || leave.dateFrom || "", to: leave.to || leave.dateTo || "" })); local.forEach((leave) => { if (!remote.some((item) => item.id === leave.id)) remote.push(leave); }); setWorkerMedicalLeaves(remote); }).catch(() => setWorkerMedicalLeaves(local)); }, [summaryRut]);
 
   if (route.startsWith("/personas/resumen/")) {
-    const rut = decodeURIComponent(route.slice("/personas/resumen/".length));
-    const profile = profiles.find((item) => item.identityNumber === rut);
-    const worker = workers.find((item) => item.rut === rut);
+    const profile = profiles.find((item) => item.identityNumber === summaryRut);
+    const worker = workers.find((item) => item.rut === summaryRut);
     if (loading) return <section className="panel module-panel"><div className="search-prompt"><span>○</span><strong>Cargando trabajador</strong><p>Consultando sus antecedentes registrados.</p></div></section>;
     if (!worker) return <section className="panel module-panel"><EmptyResult text="No fue posible encontrar al trabajador seleccionado." /><footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></section>;
-    return <div className="worker-profile-summary"><section className="panel module-panel"><div className="panel-heading"><div><p className="page-eyebrow">Resumen del trabajador</p><h2>{worker.name}</h2><p className="muted">{worker.rut} · {worker.role || "Sin cargo informado"} · {worker.costCenter || "Sin obra informada"}</p></div><span className="status-chip status-chip--secure">Registrado</span></div></section>{profile ? workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="profile-summary-grid">{section.fields.map((field) => <div key={field.name}><small>{field.label}</small><strong>{profileValue(profile, field)}</strong></div>)}</div></section>) : <section className="panel module-panel"><div className="info-banner"><span>i</span><p>Este trabajador proviene de una contratación anterior. Sus antecedentes disponibles son nombre, cédula de identidad, cargo y obra.</p></div></section>}<footer className="panel form-footer worker-submit"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></div>;
+    const initials = worker.name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); const availableTabs = workerRecords.some((record) => record.category === "Finiquito" || record.subtype === "Finiquito") ? [...workerTabs, "Finiquito"] : workerTabs;
+    return <div className="worker-profile-summary"><section className="panel worker-identity-card"><div className="worker-photo">{initials}</div><div className="worker-identity-main"><div className="worker-badges"><span className="status-chip status-chip--secure">Activo</span><span className="status-chip">Código {profile?.id ?? "Sin código"}</span></div><h2>{worker.name}</h2><p>{worker.role || "Sin cargo informado"} <i>•</i> {worker.costCenter || "Sin obra informada"} <i>•</i> {profile?.contractTerm || "Plazo no informado"}</p><div className="worker-key-data"><div><small>RUT</small><strong>{worker.rut}</strong></div><div><small>Edad / Género</small><strong>{profile ? `${ageFrom(profile.birthDate)} · ${profile.gender || "No informado"}` : "No informado"}</strong></div><div><small>Celular</small><strong>{profile?.mobile || "No informado"}</strong></div><div><small>Correo electrónico</small><strong>{profile?.email || "No informado"}</strong></div><div className="wide"><small>Dirección</small><strong>{profile ? `${profile.address}, ${profile.commune}, ${profile.region}` : "No informada"}</strong></div></div><div className="worker-tenure"><small>Antigüedad</small><strong>{monthsBetween(profile?.entryDate ?? "")}</strong></div></div></section><nav className="worker-profile-tabs" aria-label="Secciones de la ficha">{availableTabs.map((tab) => <button key={tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>)}</nav>{activeTab === "Resumen" ? <WorkerSummary records={workerRecords} medicalLeaves={workerMedicalLeaves} /> : activeTab === "Información personal" ? (profile ? <div className="worker-profile-summary">{workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="profile-summary-grid">{section.fields.map((field) => <div key={field.name}><small>{field.label}</small><strong>{profileValue(profile, field)}</strong></div>)}</div></section>)}</div> : <section className="panel module-panel"><EmptyResult text="No existen antecedentes personales ampliados para este trabajador." /></section>) : <WorkerRecordPanel rut={summaryRut} category={activeTab} records={workerRecords} reload={reloadRecords} medicalLeaves={workerMedicalLeaves} />}<footer className="panel form-footer worker-submit"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></div>;
   }
 
   if (route === "/personas/nueva-solicitud") return <form className="worker-profile-form" onSubmit={async (event) => {
@@ -372,7 +423,13 @@ export function MedicalLeaveModule({ route, processes, setRoute }: { route: stri
   const to = endDate(from, days);
 
   useEffect(() => {
-    try { setRecords(JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]")); } catch { setRecords([]); }
+    let cancelled = false;
+    (async () => {
+      let local: MedicalLeaveRecord[] = []; try { local = JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]"); } catch { local = []; }
+      if (local.length) await Promise.all(local.map((record) => fetch("/api/medical-leaves", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(record) }).catch(() => null)));
+      try { const response = await fetch("/api/medical-leaves"); const data = response.ok ? await response.json() as { medicalLeaves?: Array<MedicalLeaveRecord & { dateFrom?: string; dateTo?: string }> } : { medicalLeaves: [] }; const remote = (data.medicalLeaves ?? []).map((record) => ({ ...record, from: record.from || record.dateFrom || "", to: record.to || record.dateTo || "" })); const combined = [...remote]; local.forEach((record) => { if (!combined.some((item) => item.id === record.id)) combined.push(record); }); if (!cancelled) setRecords(combined); } catch { if (!cancelled) setRecords(local); }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const filtered = records.filter((record) => {
@@ -383,16 +440,14 @@ export function MedicalLeaveModule({ route, processes, setRoute }: { route: stri
     return matchesWorker && matchesCenter && (!monthFilter || (record.from <= monthEnd && record.to >= monthStart));
   });
 
-  if (route === "/licencias/nueva") return <form className="panel process-form" onSubmit={(event) => {
+  if (route === "/licencias/nueva") return <form className="panel process-form" onSubmit={async (event) => {
     event.preventDefault();
     if (!selectedWorker) return window.alert("Selecciona un trabajador registrado.");
-    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
-    const record: MedicalLeaveRecord = { id: crypto.randomUUID(), workerRut: selectedWorker.rut, workerName: selectedWorker.name, costCenter: selectedWorker.costCenter, from, to, days, folio: String(values.folio), specialty: String(values.specialty) };
-    const updated = [record, ...records];
-    setRecords(updated);
-    sessionStorage.setItem("sig-medical-leaves", JSON.stringify(updated));
-    window.alert("Licencia médica registrada correctamente.");
-    navigate("/licencias", setRoute);
+    const form = new FormData(event.currentTarget); const id = `LIC-${crypto.randomUUID().slice(0, 9).toUpperCase()}`; form.set("id", id); form.set("workerRut", selectedWorker.rut); form.set("workerName", selectedWorker.name); form.set("costCenter", selectedWorker.costCenter); form.set("from", from); form.set("to", to); form.set("days", String(days));
+    const response = await fetch("/api/medical-leaves", { method: "POST", body: form }); const data = await response.json() as { error?: string };
+    if (!response.ok) return window.alert(data.error ?? "No fue posible registrar la licencia médica.");
+    const record: MedicalLeaveRecord = { id, workerRut: selectedWorker.rut, workerName: selectedWorker.name, costCenter: selectedWorker.costCenter, from, to, days, folio: String(form.get("folio")), specialty: String(form.get("specialty")), status: "Registrada", fileName: form.get("file") instanceof File ? (form.get("file") as File).name : "" };
+    const updated = [record, ...records]; setRecords(updated); sessionStorage.setItem("sig-medical-leaves", JSON.stringify(updated)); window.alert("Licencia médica registrada correctamente."); navigate("/licencias", setRoute);
   }}>
     <div className="panel-heading"><div><p className="page-eyebrow">Licencias Médicas</p><h2>Nueva licencia médica</h2></div><span className="status-chip status-chip--draft">Nuevo registro</span></div>
     <div className="form-grid">
@@ -403,6 +458,7 @@ export function MedicalLeaveModule({ route, processes, setRoute }: { route: stri
       <label>Hasta<input type="date" value={to} readOnly /></label>
       <label>N° de folio<input name="folio" required placeholder="Número de folio" /></label>
       <label>Especialidad<input name="specialty" required placeholder="Especialidad médica" /></label>
+      <label className="full">Respaldo opcional<input name="file" type="file" /></label>
     </div>
     <footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/licencias", setRoute)}>Cancelar</button><button className="primary-button">Guardar licencia médica</button></footer>
   </form>;
@@ -411,7 +467,7 @@ export function MedicalLeaveModule({ route, processes, setRoute }: { route: stri
     <div className="section-actions"><div><p className="page-eyebrow">Licencias Médicas</p><h2>Trabajadores con licencia</h2></div><button className="primary-button" onClick={() => navigate("/licencias/nueva", setRoute)}>＋ Nueva licencia médica</button></div>
     <div className="medical-filters"><label>Trabajador<select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)}><option value="">Todos los trabajadores</option>{workers.map((worker) => <option key={worker.rut} value={worker.rut}>{worker.name}</option>)}</select></label><label>Centro de costo<select value={centerFilter} onChange={(event) => setCenterFilter(event.target.value)}><option value="">Todos los centros de costo</option>{costCenters.map((center) => <option key={center}>{center}</option>)}</select></label><label>Mes<input type="month" value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} /></label></div>
     <div className="license-summary"><div><small>Con licencia en el período</small><strong>{filtered.length}</strong></div><div><small>Días informados</small><strong>{filtered.reduce((total, record) => total + record.days, 0)}</strong></div></div>
-    {filtered.length ? <div className="table-wrap"><table><thead><tr><th>Centro de costo</th><th>Trabajador</th><th>Desde</th><th>Hasta</th><th>N° de días</th><th>Folio</th><th>Especialidad</th></tr></thead><tbody>{filtered.map((record) => <tr key={record.id}><td>{record.costCenter}</td><td>{record.workerName}</td><td>{new Date(`${record.from}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{new Date(`${record.to}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{record.days}</td><td>{record.folio}</td><td>{record.specialty}</td></tr>)}</tbody></table></div> : <EmptyResult text="No hay trabajadores con licencia para los filtros seleccionados." />}
+    {filtered.length ? <div className="table-wrap"><table><thead><tr><th>Centro de costo</th><th>Trabajador</th><th>Desde</th><th>Hasta</th><th>N° de días</th><th>Folio</th><th>Especialidad</th><th>Respaldo</th></tr></thead><tbody>{filtered.map((record) => <tr key={record.id}><td>{record.costCenter}</td><td>{record.workerName}</td><td>{new Date(`${record.from}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{new Date(`${record.to}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{record.days}</td><td>{record.folio}</td><td>{record.specialty}</td><td>{record.fileKey ? <button className="table-action" onClick={() => window.open(fileUrl(record.fileKey!), "_blank")}>Descargar</button> : "Opcional · no cargado"}</td></tr>)}</tbody></table></div> : <EmptyResult text="No hay trabajadores con licencia para los filtros seleccionados." />}
   </section>;
 }
 

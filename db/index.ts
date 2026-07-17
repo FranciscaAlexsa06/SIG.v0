@@ -11,3 +11,8 @@ export function getDb() {
 
   return drizzle(env.DB, { schema });
 }
+
+export function getFilesBucket() {
+  if (!env.FILES) throw new Error("Cloudflare R2 binding `FILES` is unavailable.");
+  return env.FILES;
+}

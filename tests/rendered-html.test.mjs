@@ -65,7 +65,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
 
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   assert.match(styles, /login-hero:after[\s\S]*center\/contain no-repeat/);
-  assert.match(styles, /login-hero:before[\s\S]*center\/cover no-repeat/);
+  assert.match(styles, /login-hero:before\s*\{\s*content:none/);
   assert.match(app, /path: "\/licencias"/);
 
   for (const label of [
@@ -86,4 +86,10 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Ver resumen/);
   assert.match(operational, /\/personas\/resumen\//);
   assert.match(app, /fetch\("\/api\/workers"/);
+  for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Contratos y anexos", "Cumplimiento personal", "Ver resumen"]) assert.match(operational, new RegExp(label, "i"));
+  assert.match(operational, /api\/worker-records/);
+  assert.match(operational, /api\/medical-leaves/);
+  assert.equal(JSON.parse(hosting).r2, "FILES");
+  assert.match(schema, /sqliteTable\("worker_records"/);
+  assert.match(schema, /sqliteTable\("medical_leaves"/);
 });

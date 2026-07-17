@@ -36,6 +36,7 @@ export const workers = sqliteTable("workers", {
   identityNumber: text("identity_number").notNull().unique(),
   birthDate: text("birth_date").notNull(),
   nationality: text("nationality").notNull(),
+  gender: text("gender").notNull().default("No informado"),
   maritalStatus: text("marital_status").notNull(),
   educationLevel: text("education_level").notNull(),
   professionalTitle: text("professional_title").notNull().default(""),
@@ -63,4 +64,39 @@ export const workers = sqliteTable("workers", {
   source: text("source").notNull().default("Individual"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const workerRecords = sqliteTable("worker_records", {
+  id: text("id").primaryKey(),
+  workerRut: text("worker_rut").notNull(),
+  category: text("category").notNull(),
+  subtype: text("subtype").notNull(),
+  title: text("title").notNull(),
+  issueDate: text("issue_date").notNull().default(""),
+  expiryDate: text("expiry_date").notNull().default(""),
+  status: text("status").notNull().default("Vigente"),
+  detail: text("detail").notNull().default(""),
+  metadata: text("metadata").notNull().default("{}"),
+  fileName: text("file_name").notNull().default(""),
+  fileKey: text("file_key").notNull().default(""),
+  contentType: text("content_type").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const medicalLeaves = sqliteTable("medical_leaves", {
+  id: text("id").primaryKey(),
+  workerRut: text("worker_rut").notNull(),
+  workerName: text("worker_name").notNull(),
+  costCenter: text("cost_center").notNull(),
+  dateFrom: text("date_from").notNull(),
+  dateTo: text("date_to").notNull(),
+  days: integer("days").notNull(),
+  folio: text("folio").notNull(),
+  specialty: text("specialty").notNull().default(""),
+  status: text("status").notNull().default("Registrada"),
+  fileName: text("file_name").notNull().default(""),
+  fileKey: text("file_key").notNull().default(""),
+  contentType: text("content_type").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

@@ -164,13 +164,15 @@ function Dashboard({ setRoute, processes }: { setRoute: (v: string) => void; pro
   const [detail, setDetail] = useState<string | null>(null);
   const [medicalLeaves, setMedicalLeaves] = useState<MedicalLeaveRecord[]>([]);
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
-  useEffect(() => { try { setMedicalLeaves(JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]")); } catch { setMedicalLeaves([]); } }, []);
+  useEffect(() => { let local: MedicalLeaveRecord[] = []; try { local = JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]"); } catch { local = []; } fetch("/api/medical-leaves").then((response) => response.ok ? response.json() : { medicalLeaves: [] }).then((data: { medicalLeaves?: Array<MedicalLeaveRecord & { dateFrom?: string; dateTo?: string }> }) => { const remote = (data.medicalLeaves ?? []).map((leave) => ({ ...leave, from: leave.from || leave.dateFrom || "", to: leave.to || leave.dateTo || "" })); local.forEach((leave) => { if (!remote.some((item) => item.id === leave.id)) remote.push(leave); }); setMedicalLeaves(remote); }).catch(() => setMedicalLeaves(local)); }, []);
   useEffect(() => { fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setWorkers(data.workers ?? [])).catch(() => setWorkers([])); }, []);
   const currentDay = useMemo(() => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10); }, []);
   const activeMedicalLeaves = medicalLeaves.filter((record) => record.from <= currentDay && record.to >= currentDay);
+  const women = workers.filter((worker) => worker.gender === "Femenino").length;
+  const men = workers.filter((worker) => worker.gender === "Masculino").length;
   const tasks = processes.filter((p) => p.status !== "Finalizado").length;
   const cards = [
-    { id: "personas", icon: "○", value: String(workers.length), label: "Trabajadores activos", note: "Dotación vigente", tone: "blue" },
+    { id: "personas", icon: "○", value: String(workers.length), label: "Trabajadores activos", note: `${women} mujeres · ${men} hombres`, tone: "blue" },
     { id: "asistencia", icon: "◷", value: "0%", label: "Asistencia informada", note: "Sin registros del período", tone: "green" },
     { id: "contratos", icon: "▤", value: "0", label: "Contratos por vencer", note: "Próximos 30 días", tone: "amber" },
     { id: "licencias", icon: "+", value: String(activeMedicalLeaves.length), label: "Licencias médicas", note: "Activas en el período", tone: "violet" },

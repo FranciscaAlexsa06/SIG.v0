@@ -8,6 +8,7 @@ type WorkerPayload = {
   identityNumber?: string;
   birthDate?: string;
   nationality?: string;
+  gender?: string;
   maritalStatus?: string;
   educationLevel?: string;
   professionalTitle?: string;
@@ -34,14 +35,14 @@ type WorkerPayload = {
   emergencyMobile?: string;
 };
 
-const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "fullName", "identityNumber", "birthDate", "nationality", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "workSite", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
+const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "fullName", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "workSite", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
 
 function clean(value: unknown) { return String(value ?? "").trim(); }
 
 function workerValues(payload: WorkerPayload, source: string) {
   return {
     id: `TRA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-    entryDate: clean(payload.entryDate), fullName: clean(payload.fullName), identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: clean(payload.workSite), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
+    entryDate: clean(payload.entryDate), fullName: clean(payload.fullName), identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: clean(payload.workSite), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
   };
 }
 
