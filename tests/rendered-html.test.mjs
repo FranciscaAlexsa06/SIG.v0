@@ -50,4 +50,18 @@ test("includes the requested connected dashboard and hiring flow", async () => {
 
   assert.doesNotMatch(app, /expediente/i);
   assert.doesNotMatch(operational, /Por trabajador y mes/i);
+
+  for (const label of [
+    "Licencias Médicas",
+    "Nueva licencia médica",
+    "Número de días",
+    "N° de folio",
+    "Especialidad",
+    "Ingresar empresa",
+    "Razón social",
+  ]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
+
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+  assert.match(styles, /background-size:contain/);
+  assert.match(app, /path: "\/licencias"/);
 });

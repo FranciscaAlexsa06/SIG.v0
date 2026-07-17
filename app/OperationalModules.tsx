@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ProcessRecord = {
   id: string;
@@ -37,6 +37,28 @@ type AttendanceRecord = {
   attachmentType: string;
 };
 
+export type MedicalLeaveRecord = {
+  id: string;
+  workerRut: string;
+  workerName: string;
+  costCenter: string;
+  from: string;
+  to: string;
+  days: number;
+  folio: string;
+  specialty: string;
+};
+
+type CompanyRecord = {
+  id: string;
+  legalName: string;
+  rut: string;
+  tradeName: string;
+  representative: string;
+  address: string;
+  status: string;
+};
+
 const documentOptions = [
   "Contrato",
   "Anexo Obra",
@@ -65,6 +87,13 @@ function localDate() {
   const date = new Date();
   const offset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function endDate(from: string, days: number) {
+  if (!from || days < 1) return "";
+  const date = new Date(`${from}T12:00:00`);
+  date.setDate(date.getDate() + days - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function workersFrom(processes: ProcessRecord[]) {
@@ -205,4 +234,76 @@ export function VacationsModule({ route, processes, setRoute }: { route: string;
   }}><div className="panel-heading"><div><p className="page-eyebrow">Vacaciones</p><h2>Nueva solicitud</h2></div><span className="status-chip status-chip--draft">Solicitud</span></div><div className="form-grid"><label className="full">Trabajador<input name="worker" list="vacation-workers" value={requestWorker} onChange={(event) => setRequestWorker(event.target.value)} required placeholder="Buscar o modificar trabajador" /><datalist id="vacation-workers">{workers.map((worker) => <option key={worker.rut} value={`${worker.name} · ${worker.rut}`} />)}</datalist></label><label>Desde<input name="from" type="date" required /></label><label>Hasta<input name="to" type="date" required /></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/vacaciones", setRoute)}>Cancelar</button><button className="primary-button">Enviar solicitud</button></footer></form>;
 
   return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Vacaciones</p><h2>Buscar trabajador</h2></div><button className="primary-button" onClick={() => navigate(selected ? `/vacaciones/nueva-solicitud/${encodeURIComponent(selected.rut)}` : "/vacaciones/nueva-solicitud", setRoute)}>＋ Nueva solicitud</button></div><label className="worker-search"><span>Nombre o RUT del trabajador</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>{selected && <div className="selected-worker"><div className="worker-avatar">{selected.name.slice(0, 1)}</div><div><small>Trabajador seleccionado</small><strong>{selected.name}</strong><span>{selected.rut} · {selected.costCenter}</span></div><button className="table-action" onClick={() => setSelected(null)}>Cambiar</button></div>}{query.trim() && !selected && (filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut}</span><small>{worker.company} · {worker.costCenter}</small></div><button className="table-action" onClick={() => { setSelected(worker); setQuery(worker.name); }}>Seleccionar</button></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />)}{!query.trim() && !selected && <div className="search-prompt"><span>☼</span><strong>Selecciona un trabajador</strong><p>Busca por nombre o RUT para revisar y crear solicitudes.</p></div>}</section>;
+}
+
+export function MedicalLeaveModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
+  const workers = useMemo(() => workersFrom(processes), [processes]);
+  const costCenters = useMemo(() => [...new Set(workers.map((worker) => worker.costCenter).filter(Boolean))], [workers]);
+  const [records, setRecords] = useState<MedicalLeaveRecord[]>([]);
+  const [workerFilter, setWorkerFilter] = useState("");
+  const [centerFilter, setCenterFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState(localDate().slice(0, 7));
+  const [workerRut, setWorkerRut] = useState("");
+  const [days, setDays] = useState(1);
+  const [from, setFrom] = useState(localDate());
+  const selectedWorker = workers.find((worker) => worker.rut === workerRut);
+  const to = endDate(from, days);
+
+  useEffect(() => {
+    try { setRecords(JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]")); } catch { setRecords([]); }
+  }, []);
+
+  const filtered = records.filter((record) => {
+    const matchesWorker = !workerFilter || record.workerRut === workerFilter;
+    const matchesCenter = !centerFilter || record.costCenter === centerFilter;
+    const monthStart = `${monthFilter}-01`;
+    const monthEnd = `${monthFilter}-31`;
+    return matchesWorker && matchesCenter && (!monthFilter || (record.from <= monthEnd && record.to >= monthStart));
+  });
+
+  if (route === "/licencias/nueva") return <form className="panel process-form" onSubmit={(event) => {
+    event.preventDefault();
+    if (!selectedWorker) return window.alert("Selecciona un trabajador registrado.");
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const record: MedicalLeaveRecord = { id: crypto.randomUUID(), workerRut: selectedWorker.rut, workerName: selectedWorker.name, costCenter: selectedWorker.costCenter, from, to, days, folio: String(values.folio), specialty: String(values.specialty) };
+    const updated = [record, ...records];
+    setRecords(updated);
+    sessionStorage.setItem("sig-medical-leaves", JSON.stringify(updated));
+    window.alert("Licencia médica registrada correctamente.");
+    navigate("/licencias", setRoute);
+  }}>
+    <div className="panel-heading"><div><p className="page-eyebrow">Licencias Médicas</p><h2>Nueva licencia médica</h2></div><span className="status-chip status-chip--draft">Nuevo registro</span></div>
+    <div className="form-grid">
+      <label className="full">Trabajador<select value={workerRut} onChange={(event) => setWorkerRut(event.target.value)} required><option value="">Seleccionar trabajador</option>{workers.map((worker) => <option key={worker.rut} value={worker.rut}>{worker.name} · {worker.rut}</option>)}</select></label>
+      <label>Centro de costo<input value={selectedWorker?.costCenter ?? ""} readOnly placeholder="Se completa al seleccionar trabajador" /></label>
+      <label>Número de días<input type="number" min="1" value={days} onChange={(event) => setDays(Math.max(1, Number(event.target.value)))} required /></label>
+      <label>Comienza<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} required /></label>
+      <label>Hasta<input type="date" value={to} readOnly /></label>
+      <label>N° de folio<input name="folio" required placeholder="Número de folio" /></label>
+      <label>Especialidad<input name="specialty" required placeholder="Especialidad médica" /></label>
+    </div>
+    <footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/licencias", setRoute)}>Cancelar</button><button className="primary-button">Guardar licencia médica</button></footer>
+  </form>;
+
+  return <section className="panel module-panel">
+    <div className="section-actions"><div><p className="page-eyebrow">Licencias Médicas</p><h2>Trabajadores con licencia</h2></div><button className="primary-button" onClick={() => navigate("/licencias/nueva", setRoute)}>＋ Nueva licencia médica</button></div>
+    <div className="medical-filters"><label>Trabajador<select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)}><option value="">Todos los trabajadores</option>{workers.map((worker) => <option key={worker.rut} value={worker.rut}>{worker.name}</option>)}</select></label><label>Centro de costo<select value={centerFilter} onChange={(event) => setCenterFilter(event.target.value)}><option value="">Todos los centros de costo</option>{costCenters.map((center) => <option key={center}>{center}</option>)}</select></label><label>Mes<input type="month" value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} /></label></div>
+    <div className="license-summary"><div><small>Con licencia en el período</small><strong>{filtered.length}</strong></div><div><small>Días informados</small><strong>{filtered.reduce((total, record) => total + record.days, 0)}</strong></div></div>
+    {filtered.length ? <div className="table-wrap"><table><thead><tr><th>Centro de costo</th><th>Trabajador</th><th>Desde</th><th>Hasta</th><th>N° de días</th><th>Folio</th><th>Especialidad</th></tr></thead><tbody>{filtered.map((record) => <tr key={record.id}><td>{record.costCenter}</td><td>{record.workerName}</td><td>{new Date(`${record.from}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{new Date(`${record.to}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{record.days}</td><td>{record.folio}</td><td>{record.specialty}</td></tr>)}</tbody></table></div> : <EmptyResult text="No hay trabajadores con licencia para los filtros seleccionados." />}
+  </section>;
+}
+
+export function CompaniesModule({ route, setRoute }: { route: string; setRoute: (path: string) => void }) {
+  const [companies, setCompanies] = useState<CompanyRecord[]>([]);
+  useEffect(() => { try { setCompanies(JSON.parse(sessionStorage.getItem("sig-companies") ?? "[]")); } catch { setCompanies([]); } }, []);
+
+  if (route === "/administracion/empresas/nueva") return <form className="panel process-form" onSubmit={(event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const company: CompanyRecord = { id: crypto.randomUUID(), legalName: String(values.legalName), rut: String(values.rut), tradeName: String(values.tradeName), representative: String(values.representative), address: String(values.address), status: String(values.status) };
+    const updated = [company, ...companies]; setCompanies(updated); sessionStorage.setItem("sig-companies", JSON.stringify(updated));
+    window.alert("Empresa ingresada correctamente."); navigate("/administracion/empresas", setRoute);
+  }}><div className="panel-heading"><div><p className="page-eyebrow">Administración</p><h2>Ingresar empresa</h2></div><span className="status-chip status-chip--draft">Nueva empresa</span></div><div className="form-grid"><label>Razón social<input name="legalName" required /></label><label>RUT de la empresa<input name="rut" required placeholder="76.123.456-7" /></label><label>Nombre de fantasía<input name="tradeName" /></label><label>Representante legal<input name="representative" required /></label><label className="full">Dirección<input name="address" required /></label><label>Estado<select name="status"><option>Activa</option><option>Inactiva</option></select></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/administracion/empresas", setRoute)}>Cancelar</button><button className="primary-button">Guardar empresa</button></footer></form>;
+
+  return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Administración</p><h2>Empresas</h2></div><button className="primary-button" onClick={() => navigate("/administracion/empresas/nueva", setRoute)}>＋ Ingresar empresa</button></div>{companies.length ? <div className="table-wrap"><table><thead><tr><th>Razón social</th><th>RUT</th><th>Nombre de fantasía</th><th>Representante</th><th>Estado</th></tr></thead><tbody>{companies.map((company) => <tr key={company.id}><td>{company.legalName}</td><td>{company.rut}</td><td>{company.tradeName || "—"}</td><td>{company.representative}</td><td><span className="status-chip">{company.status}</span></td></tr>)}</tbody></table></div> : <EmptyResult text="No existen empresas ingresadas." />}<footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/administracion", setRoute)}>← Volver a Administración</button></footer></section>;
 }
