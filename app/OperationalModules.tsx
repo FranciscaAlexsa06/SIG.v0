@@ -59,13 +59,37 @@ type CompanyRecord = {
   status: string;
 };
 
-type WorkerProfile = {
+export type WorkerProfile = {
   id: string;
+  entryDate: string;
   fullName: string;
   identityNumber: string;
+  birthDate: string;
+  nationality: string;
+  maritalStatus: string;
+  educationLevel: string;
+  professionalTitle: string;
+  address: string;
+  commune: string;
+  region: string;
+  mobile: string;
+  email: string;
+  familyDependents: number;
+  disabilityOrInvalidity: string;
   role: string;
   workSite: string;
-  entryDate: string;
+  contractTerm: string;
+  agreedSalary: number;
+  afp: string;
+  health: string;
+  isaprePlan: string;
+  bank: string;
+  accountType: string;
+  accountNumber: string;
+  requiresAdvance: boolean;
+  emergencyName: string;
+  emergencyRelationship: string;
+  emergencyMobile: string;
 };
 
 type WorkerField = { name: string; label: string; type?: string; optional?: boolean; options?: string[]; min?: string };
@@ -157,6 +181,30 @@ function workersFrom(processes: ProcessRecord[]) {
   return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
+function useConnectedWorkers(processes: ProcessRecord[], refreshKey = "") {
+  const processWorkers = useMemo(() => workersFrom(processes), [processes]);
+  const [profiles, setProfiles] = useState<WorkerProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setProfiles(data.workers ?? [])).catch(() => setProfiles([])).finally(() => setLoading(false));
+  }, [refreshKey]);
+  const workers = useMemo(() => {
+    const connected: Worker[] = profiles.map((profile) => ({ rut: profile.identityNumber, name: profile.fullName, role: profile.role, costCenter: profile.workSite, company: "" }));
+    processWorkers.forEach((worker) => { if (!connected.some((item) => item.rut === worker.rut)) connected.push(worker); });
+    return connected.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [profiles, processWorkers]);
+  return { workers, profiles, loading };
+}
+
+function profileValue(profile: WorkerProfile, field: WorkerField) {
+  const value = profile[field.name as keyof WorkerProfile];
+  if (field.name === "requiresAdvance") return value ? "Sí" : "No";
+  if ((field.type === "date") && value) return new Date(`${value}T12:00:00`).toLocaleDateString("es-CL");
+  if (field.name === "agreedSalary") return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value));
+  return String(value ?? "") || "—";
+}
+
 function navigate(path: string, setRoute: (path: string) => void) {
   window.history.pushState({}, "", path);
   setRoute(path);
@@ -168,18 +216,20 @@ function EmptyResult({ text }: { text: string }) {
 }
 
 export function PersonasModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const processWorkers = useMemo(() => workersFrom(processes), [processes]);
-  const [profiles, setProfiles] = useState<WorkerProfile[]>([]);
+  const { workers, profiles, loading } = useConnectedWorkers(processes, route);
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => { fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setProfiles(data.workers ?? [])).catch(() => setProfiles([])); }, [route]);
-  const workers = useMemo(() => {
-    const listed = profiles.map((profile) => ({ rut: profile.identityNumber, name: profile.fullName, role: profile.role, costCenter: profile.workSite, company: "" }));
-    processWorkers.forEach((worker) => { if (!listed.some((item) => item.rut === worker.rut)) listed.push(worker); });
-    return listed;
-  }, [profiles, processWorkers]);
   const filtered = query.trim() ? workers.filter((worker) => `${worker.name} ${worker.rut}`.toLowerCase().includes(query.toLowerCase())) : [];
+
+  if (route.startsWith("/personas/resumen/")) {
+    const rut = decodeURIComponent(route.slice("/personas/resumen/".length));
+    const profile = profiles.find((item) => item.identityNumber === rut);
+    const worker = workers.find((item) => item.rut === rut);
+    if (loading) return <section className="panel module-panel"><div className="search-prompt"><span>○</span><strong>Cargando trabajador</strong><p>Consultando sus antecedentes registrados.</p></div></section>;
+    if (!worker) return <section className="panel module-panel"><EmptyResult text="No fue posible encontrar al trabajador seleccionado." /><footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></section>;
+    return <div className="worker-profile-summary"><section className="panel module-panel"><div className="panel-heading"><div><p className="page-eyebrow">Resumen del trabajador</p><h2>{worker.name}</h2><p className="muted">{worker.rut} · {worker.role || "Sin cargo informado"} · {worker.costCenter || "Sin obra informada"}</p></div><span className="status-chip status-chip--secure">Registrado</span></div></section>{profile ? workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="profile-summary-grid">{section.fields.map((field) => <div key={field.name}><small>{field.label}</small><strong>{profileValue(profile, field)}</strong></div>)}</div></section>) : <section className="panel module-panel"><div className="info-banner"><span>i</span><p>Este trabajador proviene de una contratación anterior. Sus antecedentes disponibles son nombre, cédula de identidad, cargo y obra.</p></div></section>}<footer className="panel form-footer worker-submit"><button className="secondary-button" onClick={() => navigate("/personas", setRoute)}>← Volver a Trabajadores</button></footer></div>;
+  }
 
   if (route === "/personas/nueva-solicitud") return <form className="worker-profile-form" onSubmit={async (event) => {
     event.preventDefault(); setSaving(true); setError("");
@@ -203,12 +253,12 @@ export function PersonasModule({ route, processes, setRoute }: { route: string; 
       <button className="primary-button" onClick={() => navigate("/personas/nueva-solicitud", setRoute)}>＋ Nueva solicitud</button>
     </div>
     <label className="worker-search"><span>Nombre o RUT del trabajador</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>
-    {!query.trim() ? <div className="search-prompt"><span>○</span><strong>Busca un trabajador</strong><p>Ingresa su nombre o RUT para consultar el registro.</p></div> : filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut} · {worker.role || "Sin cargo informado"}</span><small>{[worker.company, worker.costCenter].filter(Boolean).join(" · ")}</small></div></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />}
+    {!query.trim() ? <div className="search-prompt"><span>○</span><strong>Busca un trabajador</strong><p>Ingresa su nombre o RUT para consultar el registro.</p></div> : filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut} · {worker.role || "Sin cargo informado"}</span><small>{[worker.company, worker.costCenter].filter(Boolean).join(" · ")}</small></div><button className="table-action" onClick={() => navigate(`/personas/resumen/${encodeURIComponent(worker.rut)}`, setRoute)}>Ver resumen →</button></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />}
   </section>;
 }
 
 export function DocumentModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const workers = useMemo(() => workersFrom(processes), [processes]);
+  const { workers } = useConnectedWorkers(processes);
   const slug = route.startsWith("/documentos/solicitud/") ? decodeURIComponent(route.slice("/documentos/solicitud/".length)) : "";
   const selectedType = documentOptions.find((option) => option.toLowerCase() === slug.toLowerCase()) ?? slug;
   if (route.startsWith("/documentos/solicitud/")) return <form className="panel process-form" onSubmit={(event) => {
@@ -240,7 +290,7 @@ function defaultRow(): AttendanceRow {
 }
 
 export function AttendanceModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const workers = useMemo(() => workersFrom(processes), [processes]);
+  const { workers } = useConnectedWorkers(processes);
   const costCenters = useMemo(() => [...new Set(workers.map((worker) => worker.costCenter).filter(Boolean))], [workers]);
   const [date, setDate] = useState(localDate());
   const [scope, setScope] = useState("all");
@@ -289,7 +339,7 @@ export function AttendanceModule({ route, processes, setRoute }: { route: string
 }
 
 export function VacationsModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const workers = useMemo(() => workersFrom(processes), [processes]);
+  const { workers } = useConnectedWorkers(processes);
   const routeRut = route.startsWith("/vacaciones/nueva-solicitud/") ? decodeURIComponent(route.slice("/vacaciones/nueva-solicitud/".length)) : "";
   const routeWorker = workers.find((worker) => worker.rut === routeRut);
   const [query, setQuery] = useState("");
@@ -309,7 +359,7 @@ export function VacationsModule({ route, processes, setRoute }: { route: string;
 }
 
 export function MedicalLeaveModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const workers = useMemo(() => workersFrom(processes), [processes]);
+  const { workers } = useConnectedWorkers(processes);
   const costCenters = useMemo(() => [...new Set(workers.map((worker) => worker.costCenter).filter(Boolean))], [workers]);
   const [records, setRecords] = useState<MedicalLeaveRecord[]>([]);
   const [workerFilter, setWorkerFilter] = useState("");

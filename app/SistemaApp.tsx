@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { AttendanceModule, BulkWorkersModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, type MedicalLeaveRecord } from "./OperationalModules";
+import { AttendanceModule, BulkWorkersModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, type MedicalLeaveRecord, type WorkerProfile } from "./OperationalModules";
 
 type ProcessRecord = {
   id: string;
@@ -163,12 +163,14 @@ function EmptyTable({ columns, message }: { columns: string[]; message: string }
 function Dashboard({ setRoute, processes }: { setRoute: (v: string) => void; processes: ProcessRecord[] }) {
   const [detail, setDetail] = useState<string | null>(null);
   const [medicalLeaves, setMedicalLeaves] = useState<MedicalLeaveRecord[]>([]);
+  const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   useEffect(() => { try { setMedicalLeaves(JSON.parse(sessionStorage.getItem("sig-medical-leaves") ?? "[]")); } catch { setMedicalLeaves([]); } }, []);
+  useEffect(() => { fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setWorkers(data.workers ?? [])).catch(() => setWorkers([])); }, []);
   const currentDay = useMemo(() => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10); }, []);
   const activeMedicalLeaves = medicalLeaves.filter((record) => record.from <= currentDay && record.to >= currentDay);
   const tasks = processes.filter((p) => p.status !== "Finalizado").length;
   const cards = [
-    { id: "personas", icon: "○", value: "0", label: "Trabajadores activos", note: "Dotación vigente", tone: "blue" },
+    { id: "personas", icon: "○", value: String(workers.length), label: "Trabajadores activos", note: "Dotación vigente", tone: "blue" },
     { id: "asistencia", icon: "◷", value: "0%", label: "Asistencia informada", note: "Sin registros del período", tone: "green" },
     { id: "contratos", icon: "▤", value: "0", label: "Contratos por vencer", note: "Próximos 30 días", tone: "amber" },
     { id: "licencias", icon: "+", value: String(activeMedicalLeaves.length), label: "Licencias médicas", note: "Activas en el período", tone: "violet" },
@@ -183,14 +185,14 @@ function Dashboard({ setRoute, processes }: { setRoute: (v: string) => void; pro
         <article className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Seguimiento</p><h2>Estado operativo del mes</h2></div><span className="status-chip status-chip--neutral">Sin información registrada</span></div><div className="empty-chart"><div className="chart-bars"><i /><i /><i /><i /><i /><i /><i /></div><strong>Aún no hay datos para graficar</strong><p>Los indicadores se actualizarán cuando se registren personas, asistencia y procesos.</p></div></article>
         <article className="panel quick-panel"><div className="panel-heading"><div><p className="page-eyebrow">Acciones rápidas</p><h2>Comenzar una gestión</h2></div></div><button onClick={() => go("/procesos/nueva-contratacion", setRoute)}><span>＋</span><div><strong>Nueva contratación</strong><small>Iniciar proceso guiado</small></div><b>→</b></button><button onClick={() => go("/asistencia", setRoute)}><span>◷</span><div><strong>Informar asistencia</strong><small>Abrir registro por obra</small></div><b>→</b></button><button onClick={() => go("/documentos", setRoute)}><span>▤</span><div><strong>Gestionar documentos</strong><small>Consultar repositorio</small></div><b>→</b></button></article>
       </section>
-      {detail && <DashboardDetail kind={detail} close={() => setDetail(null)} setRoute={setRoute} processes={processes} medicalLeaves={activeMedicalLeaves} />}
+      {detail && <DashboardDetail kind={detail} close={() => setDetail(null)} setRoute={setRoute} processes={processes} medicalLeaves={activeMedicalLeaves} workers={workers} />}
     </>
   );
 }
 
-function DashboardDetail({ kind, close, setRoute, processes, medicalLeaves }: { kind: string; close: () => void; setRoute: (v: string) => void; processes: ProcessRecord[]; medicalLeaves: MedicalLeaveRecord[] }) {
+function DashboardDetail({ kind, close, setRoute, processes, medicalLeaves, workers }: { kind: string; close: () => void; setRoute: (v: string) => void; processes: ProcessRecord[]; medicalLeaves: MedicalLeaveRecord[]; workers: WorkerProfile[] }) {
   const config: Record<string, { title: string; description: string; columns: string[]; action: string; path: string }> = {
-    personas: { title: "Dotación vigente", description: "Trabajadores activos agrupados por centro de costo.", columns: ["Centro de costo", "Trabajadores", "Empresa", "Estado"], action: "Ir a Trabajadores", path: "/personas" },
+    personas: { title: "Dotación vigente", description: "Trabajadores activos y su obra registrada.", columns: ["Obra", "Trabajador", "Cargo", "Estado"], action: "Ir a Trabajadores", path: "/personas" },
     asistencia: { title: "Asistencia informada", description: "Cobertura diaria por centro de costo y responsable.", columns: ["Centro de costo", "Responsable", "Total", "Informados", "Pendientes", "Estado"], action: "Ir al módulo Asistencia", path: "/asistencia?estado=pendiente" },
     contratos: { title: "Contratos por vencer", description: "Contratos y anexos que vencen en los próximos 30 días.", columns: ["Trabajador", "Centro de costo", "Documento", "Vencimiento", "Días", "Estado"], action: "Ir a Gestión Documental", path: "/documentos?filtro=por-vencer" },
     licencias: { title: "Licencias médicas activas", description: "Licencias que se cruzan con el período consultado.", columns: ["Centro de costo", "Trabajador", "Desde", "Hasta", "N° de días"], action: "Ir a Licencias Médicas", path: "/licencias" },
@@ -199,7 +201,8 @@ function DashboardDetail({ kind, close, setRoute, processes, medicalLeaves }: { 
   };
   const item = config[kind];
   const licenseTable = kind === "licencias" && medicalLeaves.length ? <div className="table-wrap"><table><thead><tr>{item.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{medicalLeaves.map((record) => <tr key={record.id}><td>{record.costCenter}</td><td>{record.workerName}</td><td>{new Date(`${record.from}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{new Date(`${record.to}T12:00:00`).toLocaleDateString("es-CL")}</td><td>{record.days}</td></tr>)}</tbody></table></div> : null;
-  return <div className="modal-backdrop" onMouseDown={close}><section className="detail-drawer" onMouseDown={(e) => e.stopPropagation()}><button className="drawer-close" onClick={close}>×</button><p className="page-eyebrow">Resumen del período</p><h2>{item.title}</h2><p className="muted">{item.description}</p>{licenseTable ?? (kind === "tareas" && processes.length ? <div className="table-wrap"><table><thead><tr>{item.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead><tbody>{processes.map((p) => <tr key={p.id}><td>Nueva contratación</td><td>{p.personName}</td><td>RRHH</td><td>{new Date(p.createdAt).toLocaleDateString("es-CL")}</td><td>Por definir</td><td><span className="status-chip">{p.status}</span></td><td>Media</td><td><button className="table-action" onClick={() => { close(); go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute); }}>Continuar</button></td></tr>)}</tbody></table></div> : <EmptyTable columns={item.columns} message={emptyMessages[kind] ?? "No hay tareas pendientes."} />)}<div className="drawer-footer"><button className="secondary-button" onClick={close}>Cerrar</button><button className="primary-button" onClick={() => { close(); go(item.path, setRoute); }}>{item.action} →</button></div></section></div>;
+  const workersTable = kind === "personas" && workers.length ? <div className="table-wrap"><table><thead><tr>{item.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{workers.map((worker) => <tr key={worker.id}><td>{worker.workSite}</td><td>{worker.fullName}</td><td>{worker.role}</td><td><span className="status-chip">Activo</span></td></tr>)}</tbody></table></div> : null;
+  return <div className="modal-backdrop" onMouseDown={close}><section className="detail-drawer" onMouseDown={(e) => e.stopPropagation()}><button className="drawer-close" onClick={close}>×</button><p className="page-eyebrow">Resumen del período</p><h2>{item.title}</h2><p className="muted">{item.description}</p>{workersTable ?? licenseTable ?? (kind === "tareas" && processes.length ? <div className="table-wrap"><table><thead><tr>{item.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead><tbody>{processes.map((p) => <tr key={p.id}><td>Nueva contratación</td><td>{p.personName}</td><td>RRHH</td><td>{new Date(p.createdAt).toLocaleDateString("es-CL")}</td><td>Por definir</td><td><span className="status-chip">{p.status}</span></td><td>Media</td><td><button className="table-action" onClick={() => { close(); go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute); }}>Continuar</button></td></tr>)}</tbody></table></div> : <EmptyTable columns={item.columns} message={emptyMessages[kind] ?? "No hay tareas pendientes."} />)}<div className="drawer-footer"><button className="secondary-button" onClick={close}>Cerrar</button><button className="primary-button" onClick={() => { close(); go(item.path, setRoute); }}>{item.action} →</button></div></section></div>;
 }
 
 function Toolbar({ children }: { children?: React.ReactNode }) {

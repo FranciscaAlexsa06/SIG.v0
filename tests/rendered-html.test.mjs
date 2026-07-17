@@ -81,4 +81,8 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /\/personas\/nueva-solicitud/);
   assert.match(workersApi, /getDb\(\)/);
   assert.match(schema, /sqliteTable\("workers"/);
+  assert.ok((operational.match(/useConnectedWorkers\(processes/g) ?? []).length >= 6);
+  assert.match(operational, /Ver resumen/);
+  assert.match(operational, /\/personas\/resumen\//);
+  assert.match(app, /fetch\("\/api\/workers"/);
 });
