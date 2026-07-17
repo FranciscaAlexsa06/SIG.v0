@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { AttendanceModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, type MedicalLeaveRecord } from "./OperationalModules";
+import { AttendanceModule, BulkWorkersModule, CompaniesModule, DocumentModule, MedicalLeaveModule, PersonasModule, VacationsModule, type MedicalLeaveRecord } from "./OperationalModules";
 
 type ProcessRecord = {
   id: string;
@@ -45,7 +45,7 @@ const emptyDraft: HiringDraft = {
 const navItems = [
   ["/dashboard", "▦", "Dashboard"],
   ["/bandeja", "✓", "Bandeja de trabajo"],
-  ["/personas", "○", "Personas"],
+  ["/personas", "○", "Trabajadores"],
   ["/asistencia", "◷", "Asistencia"],
   ["/vacaciones", "☼", "Vacaciones"],
   ["/licencias", "+", "Licencias Médicas"],
@@ -59,7 +59,7 @@ const navItems = [
 const routeTitles: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
   "/dashboard": { eyebrow: "Control mensual", title: "Dashboard", subtitle: "Indicadores y alertas del período seleccionado." },
   "/bandeja": { eyebrow: "Mi trabajo", title: "Bandeja de trabajo", subtitle: "Tareas asignadas, supervisadas y próximas a vencer." },
-  "/personas": { eyebrow: "Gestión de personas", title: "Personas", subtitle: "Busca y selecciona un trabajador registrado." },
+  "/personas": { eyebrow: "Gestión de trabajadores", title: "Trabajadores", subtitle: "Busca, consulta e ingresa información de trabajadores." },
   "/asistencia": { eyebrow: "Registro diario", title: "Asistencia", subtitle: "Control por centro de costo, trabajador y período." },
   "/vacaciones": { eyebrow: "Saldos y solicitudes", title: "Vacaciones", subtitle: "Períodos, folios, documentos y aprobaciones." },
   "/licencias": { eyebrow: "Control de ausencias", title: "Licencias Médicas", subtitle: "Resumen y registro de licencias por trabajador, centro de costo y mes." },
@@ -123,6 +123,7 @@ function Login({ onLogin }: { onLogin: (name: string) => void }) {
 function Header({ route, setRoute, name, onLogout }: { route: string; setRoute: (v: string) => void; name: string; onLogout: () => void }) {
   const meta = route.startsWith("/procesos/nueva-contratacion")
     ? { eyebrow: "Procesos · Nueva contratación", title: "Nueva contratación", subtitle: "Identifica a la persona y crea una nueva relación laboral." }
+    : route === "/personas/nueva-solicitud" ? { eyebrow: "Trabajadores · Nueva solicitud", title: "Ingreso de trabajador", subtitle: "Completa los antecedentes personales, laborales y previsionales." }
     : route === "/asistencia/nuevo" ? { eyebrow: "Asistencia · Nuevo ingreso", title: "Nuevo ingreso de asistencia", subtitle: "Informa la jornada de la dotación seleccionada." }
     : route.startsWith("/vacaciones/nueva-solicitud") ? { eyebrow: "Vacaciones · Solicitud", title: "Nueva solicitud de vacaciones", subtitle: "Calcula días hábiles y genera el folio del proceso." }
     : route === "/licencias/nueva" ? { eyebrow: "Licencias Médicas · Registro", title: "Nueva licencia médica", subtitle: "Registra el período, folio y especialidad del trabajador." }
@@ -189,7 +190,7 @@ function Dashboard({ setRoute, processes }: { setRoute: (v: string) => void; pro
 
 function DashboardDetail({ kind, close, setRoute, processes, medicalLeaves }: { kind: string; close: () => void; setRoute: (v: string) => void; processes: ProcessRecord[]; medicalLeaves: MedicalLeaveRecord[] }) {
   const config: Record<string, { title: string; description: string; columns: string[]; action: string; path: string }> = {
-    personas: { title: "Dotación vigente", description: "Trabajadores activos agrupados por centro de costo.", columns: ["Centro de costo", "Trabajadores", "Empresa", "Estado"], action: "Ir a Personas", path: "/personas" },
+    personas: { title: "Dotación vigente", description: "Trabajadores activos agrupados por centro de costo.", columns: ["Centro de costo", "Trabajadores", "Empresa", "Estado"], action: "Ir a Trabajadores", path: "/personas" },
     asistencia: { title: "Asistencia informada", description: "Cobertura diaria por centro de costo y responsable.", columns: ["Centro de costo", "Responsable", "Total", "Informados", "Pendientes", "Estado"], action: "Ir al módulo Asistencia", path: "/asistencia?estado=pendiente" },
     contratos: { title: "Contratos por vencer", description: "Contratos y anexos que vencen en los próximos 30 días.", columns: ["Trabajador", "Centro de costo", "Documento", "Vencimiento", "Días", "Estado"], action: "Ir a Gestión Documental", path: "/documentos?filtro=por-vencer" },
     licencias: { title: "Licencias médicas activas", description: "Licencias que se cruzan con el período consultado.", columns: ["Centro de costo", "Trabajador", "Desde", "Hasta", "N° de días"], action: "Ir a Licencias Médicas", path: "/licencias" },
@@ -250,6 +251,7 @@ function GenericModule({ route, setRoute, processes }: { route: string; setRoute
   if (route.startsWith("/vacaciones")) return <VacationsModule route={route} processes={processes} setRoute={setRoute} />;
   if (route.startsWith("/documentos")) return <DocumentModule route={route} processes={processes} setRoute={setRoute} />;
   if (route.startsWith("/licencias")) return <MedicalLeaveModule route={route} processes={processes} setRoute={setRoute} />;
+  if (route === "/administracion/carga-masiva-de-trabajadores") return <BulkWorkersModule setRoute={setRoute} />;
   if (route.startsWith("/administracion/empresas")) return <CompaniesModule route={route} setRoute={setRoute} />;
   if (route === "/bandeja") return <section className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Prioridad y vencimiento</p><h2>Mis tareas</h2></div><span className="count-badge">{processes.length} tareas</span></div>{processes.length ? <div className="record-list">{processes.map((p) => <article key={p.id}><span className="record-icon">✓</span><div><small>Nueva contratación</small><strong>{p.personName}</strong><p>{p.stage} · {p.costCenter}</p></div><span className="status-chip">{p.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute)}>Continuar</button></article>)}</div> : <EmptyTable columns={["Tarea", "Trabajador", "Responsable", "Fecha límite", "Prioridad", "Estado", "Acción"]} message="No tienes tareas pendientes." />}</section>;
 
@@ -259,9 +261,9 @@ function GenericModule({ route, setRoute, processes }: { route: string; setRoute
   if (route === "/reportes") return <div className="report-grid">{[["Dotación", "Personas activas, relaciones laborales y centros de costo."],["Asistencia", "Días, horas, inasistencias y porcentaje informado."],["Vacaciones", "Saldos legales, progresivos y períodos utilizados."],["Documental", "Cumplimiento, faltantes, vencidos y firmas."],["Procesos", "Etapas, responsables, demoras y resultados."],["Auditoría", "Usuarios, acciones, valores anteriores y nuevos."]].map(([title, text]) => <article className="panel report-card" key={title}><span>▥</span><h2>{title}</h2><p>{text}</p><div><button className="secondary-button" onClick={() => go(`/reportes/${title.toLowerCase().replaceAll(" ", "-")}`, setRoute)}>Vista previa</button><button className="table-action" onClick={() => exportEmptyReport(title)}>Exportar</button></div></article>)}</div>;
   if (route === "/auditoria") return <section className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Registro inalterable</p><h2>Eventos de auditoría</h2></div><span className="status-chip status-chip--secure">Solo lectura</span></div><Toolbar /><EmptyTable columns={["Fecha y hora", "Usuario", "Módulo", "Acción", "Registro", "Resultado", "Sesión"]} message="No hay eventos para mostrar en esta instalación inicial." /></section>;
 
-  const masters = [["Empresas", "Razón social, RUT, representante y estado."],["Obras y centros de costo", "Empresa, cliente, dirección y responsables."],["Usuarios y permisos", "Perfil, alcance por empresa y centro de costo."],["Cargos y jornadas", "Cargos activos y esquemas de jornada."],["Feriados", "Calendario utilizado en cálculos y reportes."],["Maestros o Bases del Sistema", "Documentos, anexos, contratos, equipos y estados configurables."]];
+  const masters = [["Empresas", "Razón social, RUT, representante y estado."],["Carga masiva de trabajadores", "Ingreso de antecedentes de trabajadores mediante plantilla CSV."],["Obras y centros de costo", "Empresa, cliente, dirección y responsables."],["Usuarios y permisos", "Perfil, alcance por empresa y centro de costo."],["Cargos y jornadas", "Cargos activos y esquemas de jornada."],["Feriados", "Calendario utilizado en cálculos y reportes."],["Maestros o Bases del Sistema", "Documentos, anexos, contratos, equipos y estados configurables."]];
   if (route.startsWith("/administracion/")) { const selected = decodeURIComponent(route.split("/").pop() ?? "maestro").replaceAll("-", " "); return <section className="panel"><div className="section-actions"><div><p className="page-eyebrow">Maestro activo</p><h2>{selected}</h2></div><button className="primary-button" onClick={() => window.alert("Se abrió un nuevo registro del maestro. Completa los datos cuando las empresas y permisos estén configurados.")}>＋ Agregar registro</button></div><Toolbar /><EmptyTable columns={["Nombre", "Descripción", "Estado", "Última modificación", "Acciones"]} message="No existen registros en este maestro." /><footer className="form-footer"><button className="secondary-button" onClick={() => go("/administracion", setRoute)}>← Volver a Administración</button></footer></section>; }
-  return <div className="admin-grid">{masters.map(([title, text], index) => <article className="panel admin-card" key={title}><span>{["▣","⌂","○","◇","☼","⚙"][index]}</span><div><h2>{title}</h2><p>{text}</p></div><button className="table-action" onClick={() => go(`/administracion/${title.toLowerCase().replaceAll(" ", "-")}`, setRoute)}>Administrar →</button></article>)}</div>;
+  return <div className="admin-grid">{masters.map(([title, text], index) => <article className="panel admin-card" key={title}><span>{["▣","⇧","⌂","○","◇","☼","⚙"][index]}</span><div><h2>{title}</h2><p>{text}</p></div><button className="table-action" onClick={() => go(`/administracion/${title.toLowerCase().replaceAll(" ", "-")}`, setRoute)}>Administrar →</button></article>)}</div>;
 }
 
 export function SistemaApp() {
@@ -273,5 +275,5 @@ export function SistemaApp() {
   useEffect(() => { if (!name) return; fetch("/api/processes").then((r) => r.ok ? r.json() : { processes: [] }).then((data: { processes?: ProcessRecord[] }) => setProcesses(data.processes ?? [])).catch(() => setProcesses([])); }, [name]);
   const current = useMemo(() => route.split("?")[0], [route]);
   if (!name) return <Login onLogin={(user) => { setName(user); go("/dashboard", setRoute); }} />;
-  return <div className="app-shell"><Sidebar route={current} setRoute={setRoute} open={mobileNav} close={() => setMobileNav(false)} /><div className="app-main"><button className="mobile-menu" onClick={() => setMobileNav(true)}>☰ <span>Menú</span></button><Header route={current} setRoute={setRoute} name={name} onLogout={() => setName("")} /><main className="content">{current === "/dashboard" ? <Dashboard setRoute={setRoute} processes={processes} /> : current === "/personas" ? <PersonasModule processes={processes} setRoute={setRoute} /> : current.startsWith("/procesos/nueva-contratacion") ? <HiringProcess onSaved={(record) => setProcesses((prev) => [record, ...prev])} /> : <GenericModule route={current} setRoute={setRoute} processes={processes} />}</main></div>{mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Cerrar menú" />}</div>;
+  return <div className="app-shell"><Sidebar route={current} setRoute={setRoute} open={mobileNav} close={() => setMobileNav(false)} /><div className="app-main"><button className="mobile-menu" onClick={() => setMobileNav(true)}>☰ <span>Menú</span></button><Header route={current} setRoute={setRoute} name={name} onLogout={() => setName("")} /><main className="content">{current === "/dashboard" ? <Dashboard setRoute={setRoute} processes={processes} /> : current.startsWith("/personas") ? <PersonasModule route={current} processes={processes} setRoute={setRoute} /> : current.startsWith("/procesos/nueva-contratacion") ? <HiringProcess onSaved={(record) => setProcesses((prev) => [record, ...prev])} /> : <GenericModule route={current} setRoute={setRoute} processes={processes} />}</main></div>{mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Cerrar menú" />}</div>;
 }

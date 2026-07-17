@@ -59,6 +59,53 @@ type CompanyRecord = {
   status: string;
 };
 
+type WorkerProfile = {
+  id: string;
+  fullName: string;
+  identityNumber: string;
+  role: string;
+  workSite: string;
+  entryDate: string;
+};
+
+type WorkerField = { name: string; label: string; type?: string; optional?: boolean; options?: string[]; min?: string };
+
+const workerSections: { title: string; fields: WorkerField[] }[] = [
+  { title: "I. ANTECEDENTES PERSONALES", fields: [
+    { name: "entryDate", label: "Fecha de Ingreso", type: "date" }, { name: "fullName", label: "Nombre Completo" }, { name: "identityNumber", label: "Cédula de identidad N°" }, { name: "birthDate", label: "Fecha de Nacimiento", type: "date" }, { name: "nationality", label: "Nacionalidad" }, { name: "maritalStatus", label: "Estado Civil" }, { name: "educationLevel", label: "Nivel Educacional" }, { name: "professionalTitle", label: "Título profesional (Si aplica)", optional: true }, { name: "address", label: "Dirección" }, { name: "commune", label: "Comuna" }, { name: "region", label: "Región" }, { name: "mobile", label: "N° de celular", type: "tel" }, { name: "email", label: "Correo Electrónico", type: "email" }, { name: "familyDependents", label: "Cargas familiares", type: "number", min: "0" }, { name: "disabilityOrInvalidity", label: "Discapacidad o Pensionado por Invalidez", options: ["No", "Sí"] },
+  ] },
+  { title: "II. ANTECEDENTES LABORALES", fields: [
+    { name: "role", label: "Cargo" }, { name: "workSite", label: "Obra" }, { name: "contractTerm", label: "Plazo de contratación" }, { name: "agreedSalary", label: "Sueldo pactado", type: "number", min: "0" },
+  ] },
+  { title: "III. INFORMACIÓN PREVISIONAL Y DE SALUD", fields: [
+    { name: "afp", label: "AFP" }, { name: "health", label: "Salud" }, { name: "isaprePlan", label: "Plan Isapre (si aplica)", optional: true },
+  ] },
+  { title: "IV. INFORMACIÓN BANCARIA", fields: [
+    { name: "bank", label: "Banco" }, { name: "accountType", label: "Tipo de Cuenta" }, { name: "accountNumber", label: "Número de Cuenta" }, { name: "requiresAdvance", label: "Requiere anticipo", options: ["No", "Sí"] },
+  ] },
+  { title: "V. CONTACTO DE EMERGENCIA", fields: [
+    { name: "emergencyName", label: "Nombre Completo" }, { name: "emergencyRelationship", label: "Parentesco" }, { name: "emergencyMobile", label: "N° celular de contacto", type: "tel" },
+  ] },
+];
+
+const bulkWorkerColumns = [
+  ["Fecha de Ingreso", "entryDate"], ["Nombre Completo", "fullName"], ["Cédula de identidad N°", "identityNumber"], ["Fecha de Nacimiento", "birthDate"], ["Nacionalidad", "nationality"], ["Estado Civil", "maritalStatus"], ["Nivel Educacional", "educationLevel"], ["Título profesional", "professionalTitle"], ["Dirección", "address"], ["Comuna", "commune"], ["Región", "region"], ["N° de celular", "mobile"], ["Correo Electrónico", "email"], ["Cargas familiares", "familyDependents"], ["Discapacidad o Pensionado por Invalidez", "disabilityOrInvalidity"], ["Cargo", "role"], ["Obra", "workSite"], ["Plazo de contratación", "contractTerm"], ["Sueldo pactado", "agreedSalary"], ["AFP", "afp"], ["Salud", "health"], ["Plan Isapre", "isaprePlan"], ["Banco", "bank"], ["Tipo de Cuenta", "accountType"], ["Número de Cuenta", "accountNumber"], ["Requiere anticipo", "requiresAdvance"], ["Nombre Contacto de Emergencia", "emergencyName"], ["Parentesco", "emergencyRelationship"], ["N° celular de contacto", "emergencyMobile"],
+] as const;
+
+function csvCells(line: string, separator: string) {
+  const cells: string[] = []; let cell = ""; let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && quoted && line[index + 1] === '"') { cell += '"'; index += 1; }
+    else if (character === '"') quoted = !quoted;
+    else if (character === separator && !quoted) { cells.push(cell.trim()); cell = ""; }
+    else cell += character;
+  }
+  cells.push(cell.trim()); return cells;
+}
+
+function normalizedHeader(value: string) { return value.replace(/^\uFEFF/, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+
 const documentOptions = [
   "Contrato",
   "Anexo Obra",
@@ -120,18 +167,43 @@ function EmptyResult({ text }: { text: string }) {
   return <div className="module-empty"><span>⌕</span><strong>Sin resultados</strong><p>{text}</p></div>;
 }
 
-export function PersonasModule({ processes, setRoute }: { processes: ProcessRecord[]; setRoute: (path: string) => void }) {
-  const workers = useMemo(() => workersFrom(processes), [processes]);
+export function PersonasModule({ route, processes, setRoute }: { route: string; processes: ProcessRecord[]; setRoute: (path: string) => void }) {
+  const processWorkers = useMemo(() => workersFrom(processes), [processes]);
+  const [profiles, setProfiles] = useState<WorkerProfile[]>([]);
   const [query, setQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { fetch("/api/workers").then((response) => response.ok ? response.json() : { workers: [] }).then((data: { workers?: WorkerProfile[] }) => setProfiles(data.workers ?? [])).catch(() => setProfiles([])); }, [route]);
+  const workers = useMemo(() => {
+    const listed = profiles.map((profile) => ({ rut: profile.identityNumber, name: profile.fullName, role: profile.role, costCenter: profile.workSite, company: "" }));
+    processWorkers.forEach((worker) => { if (!listed.some((item) => item.rut === worker.rut)) listed.push(worker); });
+    return listed;
+  }, [profiles, processWorkers]);
   const filtered = query.trim() ? workers.filter((worker) => `${worker.name} ${worker.rut}`.toLowerCase().includes(query.toLowerCase())) : [];
+
+  if (route === "/personas/nueva-solicitud") return <form className="worker-profile-form" onSubmit={async (event) => {
+    event.preventDefault(); setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/workers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget).entries())) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "No fue posible enviar la información.");
+      window.alert("Información del trabajador enviada correctamente."); navigate("/personas", setRoute);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible enviar la información."); }
+    finally { setSaving(false); }
+  }}>
+    <section className="panel module-panel"><div className="panel-heading"><div><p className="page-eyebrow">Trabajadores</p><h2>Ingresar información de una persona</h2></div><span className="status-chip status-chip--draft">Nueva solicitud</span></div><p className="form-intro">Completa los antecedentes del trabajador y envíalos a la Jefa de RRHH y Finanzas.</p></section>
+    {workerSections.map((section) => <section className="panel worker-data-section" key={section.title}><h3>{section.title}</h3><div className="form-grid">{section.fields.map((field) => <label key={field.name}>{field.label}{field.options ? <select name={field.name} required={!field.optional} defaultValue=""><option value="" disabled>Seleccionar</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : <input name={field.name} type={field.type ?? "text"} min={field.min} required={!field.optional} defaultValue={field.name === "familyDependents" ? "0" : undefined} />}</label>)}</div></section>)}
+    {error && <div className="form-error">{error}</div>}
+    <footer className="panel form-footer worker-submit"><button type="button" className="secondary-button" onClick={() => navigate("/personas", setRoute)}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? "Enviando…" : "Enviar"}</button></footer>
+  </form>;
 
   return <section className="panel module-panel">
     <div className="section-actions">
-      <div><p className="page-eyebrow">Personas</p><h2>Buscar trabajador</h2></div>
-      <button className="primary-button" onClick={() => navigate("/documentos", setRoute)}>＋ Nueva solicitud</button>
+      <div><p className="page-eyebrow">Trabajadores</p><h2>Buscar trabajador</h2></div>
+      <button className="primary-button" onClick={() => navigate("/personas/nueva-solicitud", setRoute)}>＋ Nueva solicitud</button>
     </div>
     <label className="worker-search"><span>Nombre o RUT del trabajador</span><div className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Escribe para buscar un trabajador" /></div></label>
-    {!query.trim() ? <div className="search-prompt"><span>○</span><strong>Busca un trabajador</strong><p>Ingresa su nombre o RUT para consultar el registro.</p></div> : filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut} · {worker.role || "Sin cargo informado"}</span><small>{worker.company} · {worker.costCenter}</small></div><button className="table-action" onClick={() => navigate(`/documentos/solicitud/${encodeURIComponent("Contrato")}`, setRoute)}>Nueva solicitud →</button></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />}
+    {!query.trim() ? <div className="search-prompt"><span>○</span><strong>Busca un trabajador</strong><p>Ingresa su nombre o RUT para consultar el registro.</p></div> : filtered.length ? <div className="worker-results">{filtered.map((worker) => <article key={worker.rut}><div className="worker-avatar">{worker.name.slice(0, 1)}</div><div><strong>{worker.name}</strong><span>{worker.rut} · {worker.role || "Sin cargo informado"}</span><small>{[worker.company, worker.costCenter].filter(Boolean).join(" · ")}</small></div></article>)}</div> : <EmptyResult text="No existe un trabajador registrado con ese nombre o RUT." />}
   </section>;
 }
 
@@ -306,4 +378,46 @@ export function CompaniesModule({ route, setRoute }: { route: string; setRoute: 
   }}><div className="panel-heading"><div><p className="page-eyebrow">Administración</p><h2>Ingresar empresa</h2></div><span className="status-chip status-chip--draft">Nueva empresa</span></div><div className="form-grid"><label>Razón social<input name="legalName" required /></label><label>RUT de la empresa<input name="rut" required placeholder="76.123.456-7" /></label><label>Nombre de fantasía<input name="tradeName" /></label><label>Representante legal<input name="representative" required /></label><label className="full">Dirección<input name="address" required /></label><label>Estado<select name="status"><option>Activa</option><option>Inactiva</option></select></label></div><footer className="form-footer"><button type="button" className="secondary-button" onClick={() => navigate("/administracion/empresas", setRoute)}>Cancelar</button><button className="primary-button">Guardar empresa</button></footer></form>;
 
   return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Administración</p><h2>Empresas</h2></div><button className="primary-button" onClick={() => navigate("/administracion/empresas/nueva", setRoute)}>＋ Ingresar empresa</button></div>{companies.length ? <div className="table-wrap"><table><thead><tr><th>Razón social</th><th>RUT</th><th>Nombre de fantasía</th><th>Representante</th><th>Estado</th></tr></thead><tbody>{companies.map((company) => <tr key={company.id}><td>{company.legalName}</td><td>{company.rut}</td><td>{company.tradeName || "—"}</td><td>{company.representative}</td><td><span className="status-chip">{company.status}</span></td></tr>)}</tbody></table></div> : <EmptyResult text="No existen empresas ingresadas." />}<footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/administracion", setRoute)}>← Volver a Administración</button></footer></section>;
+}
+
+export function BulkWorkersModule({ setRoute }: { setRoute: (path: string) => void }) {
+  const [rows, setRows] = useState<Record<string, string>[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function downloadTemplate() {
+    const content = `\uFEFF${bulkWorkerColumns.map(([label]) => `"${label}"`).join(";")}\r\n`;
+    const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "plantilla-carga-masiva-trabajadores.csv"; link.click(); URL.revokeObjectURL(url);
+  }
+
+  async function loadFile(file: File | null) {
+    setRows([]); setError(""); setFileName(file?.name ?? ""); if (!file) return;
+    try {
+      const text = await file.text(); const lines = text.split(/\r?\n/).filter((line) => line.trim());
+      if (lines.length < 2) throw new Error("El archivo debe incluir encabezados y al menos un trabajador.");
+      const separator = lines[0].includes(";") ? ";" : ",";
+      const headers = csvCells(lines[0], separator).map(normalizedHeader);
+      const indexes = bulkWorkerColumns.map(([label]) => headers.indexOf(normalizedHeader(label)));
+      const missing = bulkWorkerColumns.filter((_, index) => indexes[index] < 0).map(([label]) => label);
+      if (missing.length) throw new Error(`Faltan columnas de la plantilla: ${missing.join(", ")}.`);
+      const parsed = lines.slice(1).map((line) => { const cells = csvCells(line, separator); return Object.fromEntries(bulkWorkerColumns.map(([, key], index) => [key, cells[indexes[index]] ?? ""])); }).filter((row) => row.fullName || row.identityNumber);
+      if (!parsed.length) throw new Error("El archivo no contiene trabajadores para ingresar.");
+      setRows(parsed);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible leer el archivo."); }
+  }
+
+  async function submit() {
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/workers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ workers: rows }) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "No fue posible completar la carga masiva.");
+      window.alert(`${rows.length} trabajador(es) ingresado(s) correctamente.`); navigate("/personas", setRoute);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible completar la carga masiva."); }
+    finally { setSaving(false); }
+  }
+
+  return <section className="panel module-panel"><div className="section-actions"><div><p className="page-eyebrow">Administración</p><h2>Carga masiva de trabajadores</h2></div><button className="secondary-button" onClick={downloadTemplate}>Descargar plantilla CSV</button></div><div className="bulk-instructions"><span>1</span><p>Descarga y completa la plantilla con los antecedentes personales, laborales, previsionales, bancarios y de emergencia.</p><span>2</span><p>Selecciona el archivo CSV completado, revisa el resumen y envía la carga.</p></div><label className="bulk-file-picker">Seleccionar archivo CSV<input type="file" accept=".csv,text/csv" onChange={(event) => loadFile(event.target.files?.[0] ?? null)} /></label>{fileName && <p className="bulk-file-name"><strong>Archivo:</strong> {fileName}</p>}{error && <div className="form-error">{error}</div>}{rows.length > 0 && <><div className="bulk-summary"><strong>{rows.length}</strong><span>trabajadores listos para ingresar</span></div><div className="table-wrap"><table><thead><tr><th>Nombre completo</th><th>Cédula de identidad</th><th>Cargo</th><th>Obra</th><th>Fecha de ingreso</th></tr></thead><tbody>{rows.slice(0, 10).map((row, index) => <tr key={`${row.identityNumber}-${index}`}><td>{row.fullName}</td><td>{row.identityNumber}</td><td>{row.role}</td><td>{row.workSite}</td><td>{row.entryDate}</td></tr>)}</tbody></table>{rows.length > 10 && <p className="bulk-more">Se muestran los primeros 10 registros de {rows.length}.</p>}</div></>}<footer className="form-footer"><button className="secondary-button" onClick={() => navigate("/administracion", setRoute)}>← Volver a Administración</button><button className="primary-button" disabled={!rows.length || saving} onClick={submit}>{saving ? "Ingresando…" : "Enviar carga masiva"}</button></footer></section>;
 }

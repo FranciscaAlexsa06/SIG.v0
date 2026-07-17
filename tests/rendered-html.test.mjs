@@ -5,9 +5,11 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("includes the requested connected dashboard and hiring flow", async () => {
-  const [app, operational, layout, hosting] = await Promise.all([
+  const [app, operational, workersApi, schema, layout, hosting] = await Promise.all([
     readFile(new URL("app/SistemaApp.tsx", root), "utf8"),
     readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
+    readFile(new URL("app/api/workers/route.ts", root), "utf8"),
+    readFile(new URL("db/schema.ts", root), "utf8"),
     readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL(".openai/hosting.json", root), "utf8"),
   ]);
@@ -20,7 +22,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
     "Personas finiquitadas",
     "Tareas pendientes",
     "Nueva contratación",
-    "Ir a Personas",
+    "Ir a Trabajadores",
     "Ir a Gestión Documental",
   ]) assert.match(app, new RegExp(label, "i"));
 
@@ -64,4 +66,19 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   assert.match(styles, /background-size:contain/);
   assert.match(app, /path: "\/licencias"/);
+
+  for (const label of [
+    "Trabajadores",
+    "I. ANTECEDENTES PERSONALES",
+    "II. ANTECEDENTES LABORALES",
+    "III. INFORMACIÓN PREVISIONAL Y DE SALUD",
+    "IV. INFORMACIÓN BANCARIA",
+    "V. CONTACTO DE EMERGENCIA",
+    "Carga masiva de trabajadores",
+    "Enviar carga masiva",
+  ]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
+
+  assert.match(operational, /\/personas\/nueva-solicitud/);
+  assert.match(workersApi, /getDb\(\)/);
+  assert.match(schema, /sqliteTable\("workers"/);
 });
