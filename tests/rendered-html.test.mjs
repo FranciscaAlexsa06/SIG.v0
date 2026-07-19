@@ -64,9 +64,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   ]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
 
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
-  assert.match(app, /login-page--portal/);
-  assert.match(app, /Todo tu trabajo/);
-  assert.match(styles, /login-shell-grid/);
+  assert.match(app, /login-cover-v2\.png/);
+  assert.match(app, /Accede a tu espacio de trabajo/);
+  assert.match(styles, /login-hero/);
   assert.doesNotMatch(styles, /center\/contain no-repeat/);
   assert.match(operational, /Editar ficha/);
   assert.match(operational, /Código del trabajador/);
@@ -75,7 +75,8 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Corriente/);
   assert.match(operational, /Obras asignadas/);
   assert.match(operational, /api\/work-sites/);
-  assert.match(operational, /Centro de costo/);
+  assert.doesNotMatch(operational, /Centro de costo/i);
+  assert.match(operational, /Obra/);
   assert.match(operational, /Empresa principal/);
   assert.match(operational, /Monto del anticipo/);
   assert.match(operational, /Asistencia mensual por trabajador/);
