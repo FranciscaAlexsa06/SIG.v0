@@ -100,21 +100,35 @@ function Login({ onLogin }: { onLogin: (name: string) => void }) {
   }
 
   return (
-    <main className="login-page">
-      <section className="login-hero" aria-label="Portada del Sistema Integral de Gestión"><img src="/login-cover-v2.png" alt="Sistema Integral de Gestión" /></section>
-      <section className="login-panel">
-        <form className="login-card" onSubmit={submit}>
-          <div className="brand-mark"><span>SIG</span></div>
-          <p className="kicker kicker--blue">Bienvenida</p>
-          <h2>Accede a tu espacio de trabajo</h2>
-          <p className="muted">Ingresa tus credenciales para continuar.</p>
-          <label>Usuario<input value={user} onChange={(e) => setUser(e.target.value)} placeholder="Nombre de usuario" autoComplete="username" /></label>
-          <label>Contraseña o PIN<div className="password-wrap"><input value={pin} onChange={(e) => setPin(e.target.value)} type={show ? "text" : "password"} placeholder="Ingresa tu PIN" autoComplete="current-password" /><button type="button" onClick={() => setShow(!show)} aria-label={show ? "Ocultar PIN" : "Mostrar PIN"}>{show ? "Ocultar" : "Ver"}</button></div></label>
-          {error && <div className="form-error" role="alert">{error}</div>}
-          <button className="primary-button primary-button--wide" type="submit">Iniciar sesión <span>→</span></button>
-          <div className="secure-note"><span>◆</span><div><strong>Conexión segura</strong><small>Tu acceso queda protegido y registrado.</small></div></div>
-          <p className="demo-access">Acceso inicial: <strong>francisca</strong> · PIN <strong>1234</strong></p>
-        </form>
+    <main className="login-page login-page--portal">
+      <section className="login-shell" aria-label="Acceso al Sistema Integral de Gestión">
+        <header className="login-brand-row">
+          <div className="login-brand-lockup"><div className="brand-mark"><span>SIG</span></div><div><strong>Sistema Integral de Gestión</strong><small>Plataforma corporativa</small></div></div>
+          <span className="login-private-badge"><i /> Acceso privado</span>
+        </header>
+        <div className="login-shell-grid">
+          <aside className="login-welcome">
+            <p className="login-overline">GESTIÓN CENTRALIZADA</p>
+            <h1>Todo tu trabajo,<br />en un solo lugar.</h1>
+            <p>Gestiona trabajadores, asistencia, vacaciones, licencias y documentos desde un entorno seguro y ordenado.</p>
+            <div className="login-capabilities">
+              <article><span>01</span><div><strong>Información conectada</strong><small>Consulta cada módulo con datos actualizados.</small></div></article>
+              <article><span>02</span><div><strong>Control y trazabilidad</strong><small>Procesos respaldados y disponibles cuando los necesites.</small></div></article>
+            </div>
+          </aside>
+          <form className="login-card login-card--portal" onSubmit={submit}>
+            <p className="login-form-kicker">BIENVENIDA</p>
+            <h2>Inicia sesión</h2>
+            <p className="muted">Ingresa tus datos para acceder a la plataforma.</p>
+            <label>Usuario<input value={user} onChange={(e) => setUser(e.target.value)} placeholder="Nombre de usuario" autoComplete="username" autoFocus /></label>
+            <label>Contraseña o PIN<div className="password-wrap"><input value={pin} onChange={(e) => setPin(e.target.value)} type={show ? "text" : "password"} placeholder="Ingresa tu PIN" autoComplete="current-password" /><button type="button" onClick={() => setShow(!show)} aria-label={show ? "Ocultar PIN" : "Mostrar PIN"}>{show ? "Ocultar" : "Ver"}</button></div></label>
+            {error && <div className="form-error" role="alert">{error}</div>}
+            <button className="primary-button primary-button--wide login-submit" type="submit"><span>Ingresar al sistema</span><i>→</i></button>
+            <div className="secure-note"><span>◆</span><div><strong>Sesión protegida</strong><small>Tu acceso queda seguro y registrado.</small></div></div>
+            <p className="demo-access">Acceso inicial: <strong>francisca</strong> · PIN <strong>1234</strong></p>
+          </form>
+        </div>
+        <footer className="login-shell-footer"><span>SIG · Sistema Integral de Gestión</span><span>Soporte interno · Acceso autorizado</span></footer>
       </section>
     </main>
   );
