@@ -269,6 +269,12 @@ th { color:#667085; background:#f8fafc; text-transform:uppercase; letter-spacing
 .profile-summary-grid strong { margin-top:7px; color:#243247; font-size:11px; line-height:1.45; word-break:break-word; }
 .worker-identity-card { display:grid; grid-template-columns:140px 1fr; gap:24px; padding:28px; }
 .worker-photo { width:140px; height:140px; display:grid; place-items:center; border-radius:12px; color:#42678d; background:linear-gradient(145deg,#dbeaf8,#b8d0e8); font-size:32px; font-weight:900; }
+.worker-photo-column { display:grid; gap:12px; align-content:start; }
+.worker-photo-dates { display:grid; gap:8px; }
+.worker-photo-dates>div { padding:10px 12px; border-radius:10px; background:#f3f7fb; }
+.worker-photo-dates small,.worker-photo-dates strong { display:block; }
+.worker-photo-dates small { color:#667085; font-size:9px; }
+.worker-photo-dates strong { margin-top:4px; font-size:11px; }
 .worker-profile-top { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .worker-edit-button { min-height:40px; }
 .worker-identity-main h2 { margin:10px 0 8px; font-size:28px; font-weight:500; }

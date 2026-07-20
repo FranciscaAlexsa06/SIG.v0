@@ -82,11 +82,19 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /identifiedWorkSite/);
   assert.match(operational, /Empresa principal/);
   assert.match(operational, /Monto del anticipo/);
+  assert.match(operational, /worker-photo-dates/);
+  assert.match(operational, /catalog\.find\(\(item\) => item\.name === site\)\?\.costCenter \|\| site/);
   assert.match(operational, /Asistencia mensual por trabajador/);
   assert.match(operational, /Primera Jornada \(AM\)/);
   assert.match(operational, /Total empresa/);
   assert.match(operational, /Resumen de saldos por trabajador/);
   assert.match(operational, /Número de folio/);
+  assert.match(operational, /option value="Vacaciones">Vacaciones/);
+  assert.match(operational, /Fecha desde/);
+  assert.match(operational, /Fecha hasta/);
+  assert.match(operational, /safePersonFilePart\(parts\.surnames\).*safePersonFilePart\(parts\.names\).*safeFilePart\(folio\)/);
+  assert.match(operational, /vacationView === "individual"/);
+  assert.match(operational, />Ver<\/button>.*>Descargar<\/button>/);
   assert.doesNotMatch(operational, /Por obra y día/);
   assert.match(app, /path: "\/licencias"/);
 
