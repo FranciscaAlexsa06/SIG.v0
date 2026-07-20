@@ -86,6 +86,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /displayedWorkerDate\(profile\?\.entryDate/);
   assert.match(operational, /Eliminar ficha/);
   assert.match(operational, /method: "DELETE"/);
+  assert.match(operational, /Editar ficha<\/button><\/div>/);
+  assert.match(operational, /Documento eliminado correctamente/);
+  assert.match(operational, /normalizedWorkerDate\(profile\?\.entryDate/);
   assert.match(operational, /value=\{site\.costCenter\}/);
   assert.match(operational, /return site\?\.costCenter \|\| ""/);
   assert.match(operational, /Obra eliminada correctamente/);

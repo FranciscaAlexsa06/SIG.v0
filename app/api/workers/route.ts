@@ -91,7 +91,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function GET() {
-  try { return Response.json({ workers: await getDb().select().from(workers).orderBy(desc(workers.createdAt)).limit(2000) }); }
+  try { return Response.json({ workers: await getDb().select().from(workers).orderBy(desc(workers.createdAt)).limit(2000) }, { headers: { "cache-control": "no-store" } }); }
   catch (error) { return Response.json({ workers: [], error: error instanceof Error ? error.message : "No fue posible consultar los trabajadores." }, { status: 503 }); }
 }
 

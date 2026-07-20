@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url); const rut = url.searchParams.get("rut")?.trim(); const category = url.searchParams.get("category")?.trim();
     const condition = rut && category ? and(eq(workerRecords.workerRut, rut), eq(workerRecords.category, category)) : rut ? eq(workerRecords.workerRut, rut) : category ? eq(workerRecords.category, category) : undefined;
     const query = getDb().select().from(workerRecords);
-    return Response.json({ records: condition ? await query.where(condition).orderBy(desc(workerRecords.createdAt)).limit(2000) : await query.orderBy(desc(workerRecords.createdAt)).limit(2000) });
+    return Response.json({ records: condition ? await query.where(condition).orderBy(desc(workerRecords.createdAt)).limit(2000) : await query.orderBy(desc(workerRecords.createdAt)).limit(2000) }, { headers: { "cache-control": "no-store" } });
   } catch (error) { return Response.json({ records: [], error: error instanceof Error ? error.message : "No fue posible consultar los registros." }, { status: 503 }); }
 }
 
@@ -22,4 +22,17 @@ export async function POST(request: Request) {
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: category, action: "Agregar registro de trabajador", recordId: id, detail: `${subtype} asociado a ${workerRut}` });
     return Response.json({ record }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible guardar el registro." }, { status: 500 }); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const id = new URL(request.url).searchParams.get("id")?.trim();
+    if (!id) return Response.json({ error: "Selecciona el documento que deseas eliminar." }, { status: 400 });
+    const [existing] = await getDb().select().from(workerRecords).where(eq(workerRecords.id, id)).limit(1);
+    if (!existing) return Response.json({ error: "No se encontró el documento." }, { status: 404 });
+    if (existing.fileKey) await getFilesBucket().delete(existing.fileKey);
+    await getDb().delete(workerRecords).where(eq(workerRecords.id, id));
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Gestión Documental", action: "Eliminar documento", recordId: existing.id, detail: `${existing.subtype} eliminado de ${existing.workerRut}` });
+    return Response.json({ deleted: true });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar el documento." }, { status: 500 }); }
 }
