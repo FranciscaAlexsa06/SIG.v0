@@ -31,3 +31,14 @@ export async function PATCH(request: Request) {
     return Response.json({ workSite: record });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible modificar la obra." }, { status: 500 }); }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const id = clean(new URL(request.url).searchParams.get("id"));
+    if (!id) return Response.json({ error: "Selecciona la obra que deseas eliminar." }, { status: 400 });
+    const [record] = await getDb().delete(workSites).where(eq(workSites.id, id)).returning();
+    if (!record) return Response.json({ error: "No se encontró la obra." }, { status: 404 });
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Administración", action: "Eliminación de obra", recordId: record.id, detail: `${record.costCenter} · ${record.name}` });
+    return Response.json({ workSite: record });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar la obra." }, { status: 500 }); }
+}
