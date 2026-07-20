@@ -5,13 +5,14 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("includes the requested connected dashboard and hiring flow", async () => {
-  const [app, operational, workersApi, schema, layout, hosting] = await Promise.all([
+  const [app, operational, workersApi, schema, layout, hosting, basesMigration] = await Promise.all([
     readFile(new URL("app/SistemaApp.tsx", root), "utf8"),
     readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
     readFile(new URL("app/api/workers/route.ts", root), "utf8"),
     readFile(new URL("db/schema.ts", root), "utf8"),
     readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL(".openai/hosting.json", root), "utf8"),
+    readFile(new URL("drizzle/0006_moaning_skrulls.sql", root), "utf8"),
   ]);
 
   for (const label of [
@@ -84,11 +85,17 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Monto del anticipo/);
   assert.match(operational, /worker-photo-dates/);
   assert.match(operational, /displayedWorkerDate\(profile\?\.entryDate/);
-  assert.match(operational, /Eliminar ficha/);
+  assert.doesNotMatch(operational, /Eliminar ficha/);
   assert.match(operational, /method: "DELETE"/);
   assert.match(operational, /Editar ficha<\/button><\/div>/);
+  assert.match(operational, /Dejar inactivo/);
+  assert.match(operational, /Cargo eliminado correctamente/);
   assert.match(operational, /Documento eliminado correctamente/);
   assert.match(operational, /normalizedWorkerDate\(profile\?\.entryDate/);
+  assert.match(schema, /active: integer\("active"/);
+  assert.match(basesMigration, /BANCO DE CHILE/);
+  assert.match(basesMigration, /CAPITAL.*11,44%/s);
+  assert.match(basesMigration, /CHOFER Y AYUDANTE MECANICO/);
   assert.match(operational, /value=\{site\.costCenter\}/);
   assert.match(operational, /return site\?\.costCenter \|\| ""/);
   assert.match(operational, /Obra eliminada correctamente/);

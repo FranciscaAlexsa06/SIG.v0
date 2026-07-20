@@ -38,6 +38,7 @@ type WorkerPayload = {
   emergencyName?: string;
   emergencyRelationship?: string;
   emergencyMobile?: string;
+  active?: string | boolean;
 };
 
 const requiredKeys: (keyof WorkerPayload)[] = ["entryDate", "identityNumber", "birthDate", "nationality", "gender", "maritalStatus", "educationLevel", "address", "commune", "region", "mobile", "email", "disabilityOrInvalidity", "role", "contractTerm", "agreedSalary", "afp", "health", "bank", "accountType", "accountNumber", "emergencyName", "emergencyRelationship", "emergencyMobile"];
@@ -70,7 +71,7 @@ function workerValues(payload: WorkerPayload, source: string) {
   return {
     id: `TRA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     workerCode: clean(payload.workerCode), firstNames, lastNames,
-    entryDate: normalizeWorkerDate(payload.entryDate), fullName, identityNumber: clean(payload.identityNumber), birthDate: normalizeWorkerDate(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", advanceAmount: Number(payload.advanceAmount ?? 0), emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
+    entryDate: normalizeWorkerDate(payload.entryDate), fullName, identityNumber: clean(payload.identityNumber), birthDate: normalizeWorkerDate(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", advanceAmount: Number(payload.advanceAmount ?? 0), emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), active: payload.active === undefined ? true : payload.active === true || clean(payload.active).toLowerCase() === "true" || clean(payload.active).toLowerCase() === "activo", source,
   };
 }
 
@@ -79,6 +80,13 @@ export async function PATCH(request: Request) {
     const body = await request.json() as WorkerPayload & { originalIdentityNumber?: string };
     const originalIdentityNumber = clean(body.originalIdentityNumber || body.identityNumber);
     if (!originalIdentityNumber) return Response.json({ error: "No se indicó el trabajador a editar." }, { status: 400 });
+    if ((body as WorkerPayload & { statusOnly?: boolean }).statusOnly) {
+      const active = body.active === true || clean(body.active).toLowerCase() === "true" || clean(body.active).toLowerCase() === "activo";
+      const [record] = await getDb().update(workers).set({ active, updatedAt: new Date().toISOString() }).where(eq(workers.identityNumber, originalIdentityNumber)).returning();
+      if (!record) return Response.json({ error: "No fue posible encontrar al trabajador." }, { status: 404 });
+      await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: "Cambio de estado", recordId: record.id, detail: `${record.fullName}: ${active ? "Activo" : "Inactivo"}` });
+      return Response.json({ worker: record });
+    }
     if (missingRequired(body)) return Response.json({ error: "Faltan datos obligatorios." }, { status: 400 });
     const { id: _newId, ...updates } = workerValues(body, "Edición individual");
     const [record] = await getDb().update(workers).set({ ...updates, updatedAt: new Date().toISOString() }).where(eq(workers.identityNumber, originalIdentityNumber)).returning();
@@ -122,7 +130,9 @@ export async function POST(request: Request) {
     for (const payload of payloads) {
       const values = workerValues(payload, payloads.length > 1 ? "Carga masiva" : "Individual");
       const { id: _newId, ...updates } = values;
-      const [record] = await db.insert(workers).values(values).onConflictDoUpdate({ target: workers.identityNumber, set: { ...updates, updatedAt: new Date().toISOString() } }).returning();
+      const { active: _active, ...updatesWithoutActive } = updates;
+      const conflictUpdates = payload.active === undefined ? updatesWithoutActive : updates;
+      const [record] = await db.insert(workers).values(values).onConflictDoUpdate({ target: workers.identityNumber, set: { ...conflictUpdates, updatedAt: new Date().toISOString() } }).returning();
       saved.push(record);
     }
     await db.insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: payloads.length > 1 ? "Carga masiva" : "Ingreso individual", recordId: saved[0]?.id ?? "", detail: `${saved.length} trabajador(es) ingresado(s)` });

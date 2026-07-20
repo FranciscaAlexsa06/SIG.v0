@@ -66,6 +66,7 @@ export const workers = sqliteTable("workers", {
   emergencyName: text("emergency_name").notNull(),
   emergencyRelationship: text("emergency_relationship").notNull(),
   emergencyMobile: text("emergency_mobile").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
   source: text("source").notNull().default("Individual"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),

@@ -43,6 +43,13 @@
       "when": 1784270345530,
       "tag": "0005_shallow_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784530640098,
+      "tag": "0006_moaning_skrulls",
+      "breakpoints": true
     }
   ]
 }

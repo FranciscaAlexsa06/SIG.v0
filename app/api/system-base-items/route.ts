@@ -19,3 +19,15 @@ export async function POST(request: Request) {
     return Response.json({ item }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible guardar el registro." }, { status: 500 }); }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const id = new URL(request.url).searchParams.get("id")?.trim();
+    if (!id) return Response.json({ error: "Selecciona el cargo que deseas eliminar." }, { status: 400 });
+    const [existing] = await getDb().select().from(systemBaseItems).where(eq(systemBaseItems.id, id)).limit(1);
+    if (!existing || existing.category !== "Cargos") return Response.json({ error: "No se encontró el cargo." }, { status: 404 });
+    await getDb().delete(systemBaseItems).where(eq(systemBaseItems.id, id));
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Administración", action: "Eliminación de cargo", recordId: existing.id, detail: existing.name });
+    return Response.json({ deleted: true });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar el cargo." }, { status: 500 }); }
+}
