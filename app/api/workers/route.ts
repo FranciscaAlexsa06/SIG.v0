@@ -46,6 +46,17 @@ function missingRequired(payload: WorkerPayload) { return requiredKeys.some((key
 
 function clean(value: unknown) { return String(value ?? "").trim(); }
 
+function normalizeWorkerDate(value: unknown) {
+  const raw = clean(value);
+  if (!raw) return "";
+  const iso = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
+  const local = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (local) return `${local[3]}-${local[2].padStart(2, "0")}-${local[1].padStart(2, "0")}`;
+  if (/^\d{5}$/.test(raw)) { const serial = Number(raw); const date = new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000); return date.toISOString().slice(0, 10); }
+  return raw;
+}
+
 function cleanWorkSites(payload: WorkerPayload) {
   const raw = Array.isArray(payload.workSites) ? payload.workSites : clean(payload.workSites).split(/[|,]/);
   const sites = raw.map(clean).filter(Boolean);
@@ -59,7 +70,7 @@ function workerValues(payload: WorkerPayload, source: string) {
   return {
     id: `TRA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     workerCode: clean(payload.workerCode), firstNames, lastNames,
-    entryDate: clean(payload.entryDate), fullName, identityNumber: clean(payload.identityNumber), birthDate: clean(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", advanceAmount: Number(payload.advanceAmount ?? 0), emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
+    entryDate: normalizeWorkerDate(payload.entryDate), fullName, identityNumber: clean(payload.identityNumber), birthDate: normalizeWorkerDate(payload.birthDate), nationality: clean(payload.nationality), gender: clean(payload.gender), maritalStatus: clean(payload.maritalStatus), educationLevel: clean(payload.educationLevel), professionalTitle: clean(payload.professionalTitle), address: clean(payload.address), commune: clean(payload.commune), region: clean(payload.region), mobile: clean(payload.mobile), email: clean(payload.email), familyDependents: Number(payload.familyDependents ?? 0), disabilityOrInvalidity: clean(payload.disabilityOrInvalidity), role: clean(payload.role), workSite: sites[0] ?? "", workSites: JSON.stringify(sites), contractTerm: clean(payload.contractTerm), agreedSalary: Number(payload.agreedSalary ?? 0), afp: clean(payload.afp), health: clean(payload.health), isaprePlan: clean(payload.isaprePlan), bank: clean(payload.bank), accountType: clean(payload.accountType), accountNumber: clean(payload.accountNumber), requiresAdvance: payload.requiresAdvance === true || clean(payload.requiresAdvance).toLowerCase() === "sí" || clean(payload.requiresAdvance).toLowerCase() === "si", advanceAmount: Number(payload.advanceAmount ?? 0), emergencyName: clean(payload.emergencyName), emergencyRelationship: clean(payload.emergencyRelationship), emergencyMobile: clean(payload.emergencyMobile), source,
   };
 }
 
@@ -82,6 +93,19 @@ export async function PATCH(request: Request) {
 export async function GET() {
   try { return Response.json({ workers: await getDb().select().from(workers).orderBy(desc(workers.createdAt)).limit(2000) }); }
   catch (error) { return Response.json({ workers: [], error: error instanceof Error ? error.message : "No fue posible consultar los trabajadores." }, { status: 503 }); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const rut = clean(new URL(request.url).searchParams.get("rut"));
+    if (!rut) return Response.json({ error: "No se indicó el trabajador a eliminar." }, { status: 400 });
+    const [record] = await getDb().delete(workers).where(eq(workers.identityNumber, rut)).returning();
+    if (!record) return Response.json({ error: "No fue posible encontrar al trabajador." }, { status: 404 });
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: "Eliminar ficha", recordId: record.id, detail: `Ficha eliminada: ${record.fullName || record.identityNumber}` });
+    return Response.json({ deleted: true, worker: record });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar la ficha." }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

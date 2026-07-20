@@ -83,6 +83,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Empresa principal/);
   assert.match(operational, /Monto del anticipo/);
   assert.match(operational, /worker-photo-dates/);
+  assert.match(operational, /displayedWorkerDate\(profile\?\.entryDate/);
+  assert.match(operational, /Eliminar ficha/);
+  assert.match(operational, /method: "DELETE"/);
   assert.match(operational, /catalog\.find\(\(item\) => item\.name === site\)\?\.costCenter \|\| site/);
   assert.match(operational, /Asistencia mensual por trabajador/);
   assert.match(operational, /Primera Jornada \(AM\)/);
@@ -130,5 +133,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   for (const label of ["Bases del sistema", "Maestros", "Modificación masiva", "Seleccionar obra para modificar", "Vista general mensual", "Vista individual", "Archivo del trabajador"]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
   assert.match(operational, /Solo el RUT es necesario/);
   assert.match(workersApi, /isBulkUpload \? !clean\(payload\.identityNumber\) : missingRequired\(payload\)/);
+  assert.match(workersApi, /normalizeWorkerDate\(payload\.entryDate\)/);
+  assert.match(workersApi, /export async function DELETE/);
   assert.doesNotMatch(app, /\["Feriados",/);
 });

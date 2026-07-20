@@ -291,6 +291,9 @@ th { color:#667085; background:#f8fafc; text-transform:uppercase; letter-spacing
 .worker-profile-tabs { display:flex; gap:4px; overflow:auto; padding:6px; border:1px solid var(--line); border-radius:13px; background:#eaf0f7; }
 .worker-profile-tabs button { min-height:40px; flex:none; padding:0 14px; border:0; border-radius:9px; color:#426078; background:transparent; font-size:10px; font-weight:800; white-space:nowrap; }
 .worker-profile-tabs button.active { color:#155eef; background:#fff; box-shadow:0 3px 12px rgba(15,40,72,.1); }
+.worker-profile-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.danger-button { min-height:40px; padding:0 16px; border:1px solid #f3b8bf; border-radius:10px; color:#b42334; background:#fff5f6; font-weight:800; cursor:pointer; }
+.danger-button:hover { background:#ffe9ec; }
 .worker-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
 .worker-summary-grid article { min-height:130px; padding:20px; }
 .worker-summary-grid small,.worker-summary-grid strong { display:block; }
