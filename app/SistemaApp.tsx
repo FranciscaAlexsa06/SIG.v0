@@ -153,8 +153,10 @@ function Dashboard({ setRoute, processes }: { setRoute: (v: string) => void; pro
   const currentDay = useMemo(() => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10); }, []);
   const activeMedicalLeaves = medicalLeaves.filter((record) => record.from <= currentDay && record.to >= currentDay);
   const tasks = processes.filter((p) => p.status !== "Finalizado").length;
+  const men = workers.filter((worker) => worker.gender.trim().toLocaleLowerCase("es").startsWith("mascul")).length;
+  const women = workers.filter((worker) => worker.gender.trim().toLocaleLowerCase("es").startsWith("femen")).length;
   const cards = [
-    { id: "personas", icon: "○", value: String(workers.length), label: "Trabajadores activos", note: "Distribución por obra", tone: "blue" },
+    { id: "personas", icon: "○", value: String(workers.length), label: "Trabajadores activos", note: `${men} hombres · ${women} mujeres`, tone: "blue" },
     { id: "asistencia", icon: "◷", value: "0%", label: "Asistencia informada", note: "Sin registros del período", tone: "green" },
     { id: "contratos", icon: "▤", value: "0", label: "Contratos por vencer", note: "Próximos 30 días", tone: "amber" },
     { id: "licencias", icon: "+", value: String(activeMedicalLeaves.length), label: "Licencias médicas", note: "Activas en el período", tone: "violet" },

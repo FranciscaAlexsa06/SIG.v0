@@ -116,6 +116,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Seleccionar trabajador/);
   assert.match(operational, /\/personas\/resumen\//);
   assert.match(app, /fetch\("\/api\/workers"/);
+  assert.match(app, /\$\{men\} hombres · \$\{women\} mujeres/);
   for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Contratos y anexos", "Cumplimiento personal", "Seleccionar trabajador"]) assert.match(operational, new RegExp(label, "i"));
   assert.match(operational, /api\/worker-records/);
   assert.match(operational, /api\/medical-leaves/);
@@ -127,5 +128,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(schema, /sqliteTable\("document_templates"/);
   assert.match(schema, /sqliteTable\("user_profiles"/);
   for (const label of ["Bases del sistema", "Maestros", "Modificación masiva", "Seleccionar obra para modificar", "Vista general mensual", "Vista individual", "Archivo del trabajador"]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
+  assert.match(operational, /Solo el RUT es necesario/);
+  assert.match(workersApi, /isBulkUpload \? !clean\(payload\.identityNumber\) : missingRequired\(payload\)/);
   assert.doesNotMatch(app, /\["Feriados",/);
 });

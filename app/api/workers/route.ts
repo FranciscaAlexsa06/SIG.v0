@@ -87,11 +87,12 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json() as WorkerPayload | { workers?: WorkerPayload[] };
-    const payloads: WorkerPayload[] = "workers" in body ? body.workers ?? [] : [body as WorkerPayload];
+    const isBulkUpload = "workers" in body;
+    const payloads: WorkerPayload[] = isBulkUpload ? body.workers ?? [] : [body as WorkerPayload];
     if (!payloads.length) return Response.json({ error: "No hay trabajadores para ingresar." }, { status: 400 });
     if (payloads.length > 2000) return Response.json({ error: "La carga admite hasta 2.000 trabajadores por archivo." }, { status: 400 });
-    const invalid = payloads.findIndex(missingRequired);
-    if (invalid >= 0) return Response.json({ error: `Faltan datos obligatorios en el registro ${invalid + 1}.` }, { status: 400 });
+    const invalid = payloads.findIndex((payload) => isBulkUpload ? !clean(payload.identityNumber) : missingRequired(payload));
+    if (invalid >= 0) return Response.json({ error: isBulkUpload ? `Falta el RUT para identificar al trabajador en el registro ${invalid + 1}.` : `Faltan datos obligatorios en el registro ${invalid + 1}.` }, { status: 400 });
     const db = getDb();
     const saved = [];
     for (const payload of payloads) {
