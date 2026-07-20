@@ -77,6 +77,9 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /api\/work-sites/);
   assert.doesNotMatch(operational, /Centro de costo/i);
   assert.match(operational, /Obra/);
+  assert.match(operational, /Nombre de la obra/);
+  assert.doesNotMatch(operational, /Código de obra/i);
+  assert.match(operational, /identifiedWorkSite/);
   assert.match(operational, /Empresa principal/);
   assert.match(operational, /Monto del anticipo/);
   assert.match(operational, /Asistencia mensual por trabajador/);
