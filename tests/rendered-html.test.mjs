@@ -175,3 +175,26 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   assert.match(recordsApi, /25 \* 1024 \* 1024/);
   for (const holiday of ["Año Nuevo", "Viernes Santo", "Independencia Nacional", "Navidad"]) assert.match(migration, new RegExp(holiday));
 });
+
+test("includes sequential vacation folios, approvals and approved-only balance deductions", async () => {
+  const [operational, vacationsApi, schema, migration] = await Promise.all([
+    readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
+    readFile(new URL("app/api/vacations/route.ts", root), "utf8"),
+    readFile(new URL("db/schema.ts", root), "utf8"),
+    readFile(new URL("drizzle/0008_puzzling_fabian_cortez.sql", root), "utf8"),
+  ]);
+  assert.match(schema, /vacation_folio_sequences/);
+  assert.match(migration, /last_folio.*578/s);
+  assert.match(migration, /ROW_NUMBER\(\) OVER/);
+  assert.match(operational, /Solicitudes pendientes/);
+  assert.match(operational, /Corregir fechas/);
+  assert.match(operational, /DD-MM-AAAA/);
+  assert.match(operational, /Saldo actual/);
+  assert.match(operational, /Nuevo saldo/);
+  assert.match(operational, /approvedStatuses\.includes\(record\.status\)/);
+  assert.match(vacationsApi, /Pendiente de aprobación/);
+  assert.match(vacationsApi, /balanceBefore/);
+  assert.match(vacationsApi, /balanceAfter/);
+  assert.match(vacationsApi, /businessDaysBetween/);
+  assert.match(vacationsApi, /La fecha Hasta no puede ser anterior/);
+});

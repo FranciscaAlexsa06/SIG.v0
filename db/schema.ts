@@ -188,3 +188,9 @@ export const cajaAndesRecords = sqliteTable("caja_andes_records", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const vacationFolioSequences = sqliteTable("vacation_folio_sequences", {
+  id: text("id").primaryKey(),
+  lastFolio: integer("last_folio").notNull().default(578),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
