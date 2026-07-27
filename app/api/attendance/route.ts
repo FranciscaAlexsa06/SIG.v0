@@ -22,8 +22,12 @@ export async function POST(request: Request) {
       if (file) await getFilesBucket().put(fileKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
       values.push({ id: `ADE-${crypto.randomUUID().slice(0, 10).toUpperCase()}`, batchId, date, workerRut: row.workerRut, workerName: row.workerName, costCenter: row.costCenter, states: JSON.stringify(row.states), amIn: row.amIn, amOut: row.amOut, pmIn: row.pmIn, pmOut: row.pmOut, attachmentType, fileName: file?.name || "", fileKey, contentType, status: "En revisión" });
     }
-    const saved = await getDb().insert(attendanceEntries).values(values).returning();
+    const saved = [];
+    const rowsPerQuery = 6;
+    for (let index = 0; index < values.length; index += rowsPerQuery) {
+      saved.push(...await getDb().insert(attendanceEntries).values(values.slice(index, index + rowsPerQuery)).returning());
+    }
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: "Enviar a revisión", recordId: batchId, detail: `${saved.length} trabajador(es) informados el ${date}` });
     return Response.json({ entries: saved }, { status: 201 });
-  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible guardar la asistencia." }, { status: 500 }); }
+  } catch (error) { console.error("attendance-save-failed", error); return Response.json({ error: "No fue posible guardar la asistencia. Vuelve a intentarlo; si continúa, informa la fecha y la obra seleccionada." }, { status: 500 }); }
 }

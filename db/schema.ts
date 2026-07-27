@@ -66,6 +66,7 @@ export const workers = sqliteTable("workers", {
   emergencyName: text("emergency_name").notNull(),
   emergencyRelationship: text("emergency_relationship").notNull(),
   emergencyMobile: text("emergency_mobile").notNull(),
+  emergencyContacts: text("emergency_contacts").notNull().default("[]"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   source: text("source").notNull().default("Individual"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -171,4 +172,19 @@ export const medicalLeaves = sqliteTable("medical_leaves", {
   fileKey: text("file_key").notNull().default(""),
   contentType: text("content_type").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const cajaAndesRecords = sqliteTable("caja_andes_records", {
+  id: text("id").primaryKey(),
+  period: text("period").notNull(),
+  workerRut: text("worker_rut").notNull(),
+  workerName: text("worker_name").notNull().default(""),
+  credits: text("credits").notNull().default(""),
+  insurances: text("insurances").notNull().default(""),
+  detail: text("detail").notNull().default(""),
+  fileName: text("file_name").notNull().default(""),
+  fileKey: text("file_key").notNull().default(""),
+  contentType: text("content_type").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

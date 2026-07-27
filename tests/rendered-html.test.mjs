@@ -149,3 +149,29 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(workersApi, /export async function DELETE/);
   assert.doesNotMatch(app, /\["Feriados",/);
 });
+
+test("includes full attendance, editable bases, multiple contacts and Caja Los Andes", async () => {
+  const [operational, attendanceApi, basesApi, cajaApi, recordsApi, schema, migration] = await Promise.all([
+    readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
+    readFile(new URL("app/api/attendance/route.ts", root), "utf8"),
+    readFile(new URL("app/api/system-base-items/route.ts", root), "utf8"),
+    readFile(new URL("app/api/caja-los-andes/route.ts", root), "utf8"),
+    readFile(new URL("app/api/worker-records/route.ts", root), "utf8"),
+    readFile(new URL("db/schema.ts", root), "utf8"),
+    readFile(new URL("drizzle/0007_daily_magneto.sql", root), "utf8"),
+  ]);
+
+  assert.match(attendanceApi, /rowsPerQuery = 6/);
+  assert.match(operational, /Agregar otro contacto de emergencia/);
+  assert.match(operational, /WorkerPersonalInformation/);
+  assert.match(operational, /Caja Los Andes/);
+  assert.doesNotMatch(operational, /const categories = \[[^\]]*"Cuentas"/);
+  for (const health of ["FONASA", "Banmédica", "Vida Tres", "Fundación BancoEstado", "Isalud \\(Codelco\\)"]) assert.match(operational, new RegExp(health));
+  assert.match(basesApi, /export async function PATCH/);
+  assert.match(basesApi, /No se permiten registros repetidos/);
+  assert.match(cajaApi, /Carga mensual Caja Los Andes/);
+  assert.match(schema, /sqliteTable\("caja_andes_records"/);
+  assert.match(schema, /emergencyContacts: text\("emergency_contacts"/);
+  assert.match(recordsApi, /25 \* 1024 \* 1024/);
+  for (const holiday of ["Año Nuevo", "Viernes Santo", "Independencia Nacional", "Navidad"]) assert.match(migration, new RegExp(holiday));
+});
