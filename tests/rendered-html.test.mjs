@@ -162,6 +162,9 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   ]);
 
   assert.match(attendanceApi, /rowsPerQuery = 6/);
+  assert.match(operational, /const \[summaryWorker, setSummaryWorker\]/);
+  assert.match(operational, /summaryWorkerOptions/);
+  assert.match(operational, /Todos los trabajadores/);
   assert.match(attendanceApi, /export async function PATCH/);
   assert.match(attendanceApi, /Aprobar asistencia/);
   assert.match(operational, /\/asistencia\/revision\//);
