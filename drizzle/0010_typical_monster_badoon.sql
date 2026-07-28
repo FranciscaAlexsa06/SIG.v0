@@ -1,0 +1,1 @@
+ALTER TABLE `attendance_entries` ADD `review_note` text DEFAULT '' NOT NULL;

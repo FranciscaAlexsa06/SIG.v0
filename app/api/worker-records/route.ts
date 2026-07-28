@@ -24,6 +24,32 @@ export async function POST(request: Request) {
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible guardar el registro." }, { status: 500 }); }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const form = await request.formData(); const id = String(form.get("id") ?? "").trim();
+    if (!id) return Response.json({ error: "Selecciona el documento que deseas modificar." }, { status: 400 });
+    const [existing] = await getDb().select().from(workerRecords).where(eq(workerRecords.id, id)).limit(1);
+    if (!existing) return Response.json({ error: "No se encontró el documento." }, { status: 404 });
+    const workerRut = String(form.get("workerRut") ?? existing.workerRut).trim(); const category = String(form.get("category") ?? existing.category).trim(); const subtype = String(form.get("subtype") ?? existing.subtype).trim();
+    const requiresPdf = ["Documentación personal", "Documentación laboral", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Finiquito", "Vacaciones", "Carpeta Laboral"].includes(category);
+    let fileKey = existing.fileKey; let fileName = existing.fileName; let contentType = existing.contentType; const file = form.get("file");
+    if (file instanceof File && file.size) {
+      if (file.size > 25 * 1024 * 1024) return Response.json({ error: "El PDF supera el máximo permitido de 25 MB." }, { status: 413 });
+      const isPdf = file.name.toLowerCase().endsWith(".pdf") || ["application/pdf", "application/x-pdf"].includes(file.type);
+      if (requiresPdf && !isPdf) return Response.json({ error: "El documento debe estar en formato PDF." }, { status: 400 });
+      const requestedName = String(form.get("storedFileName") ?? "").trim(); fileName = requestedName || file.name; if (requiresPdf && !fileName.toLowerCase().endsWith(".pdf")) fileName += ".pdf";
+      contentType = requiresPdf ? "application/pdf" : file.type || "application/octet-stream";
+      const nextKey = `workers/${workerRut.replace(/[^a-zA-Z0-9-]/g, "_")}/${category.replace(/[^a-zA-Z0-9-]/g, "_")}/${id}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await getFilesBucket().put(nextKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
+      if (fileKey && fileKey !== nextKey) await getFilesBucket().delete(fileKey);
+      fileKey = nextKey;
+    }
+    const [record] = await getDb().update(workerRecords).set({ workerRut, category, subtype, title: String(form.get("title") ?? existing.title).trim() || subtype, issueDate: String(form.get("issueDate") ?? existing.issueDate), expiryDate: String(form.get("expiryDate") ?? existing.expiryDate), status: String(form.get("status") ?? existing.status), detail: String(form.get("detail") ?? existing.detail), metadata: String(form.get("metadata") ?? existing.metadata), fileName, fileKey, contentType, updatedAt: new Date().toISOString() }).where(eq(workerRecords.id, id)).returning();
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: category, action: "Modificar documento", recordId: id, detail: `${subtype} asociado a ${workerRut}` });
+    return Response.json({ record });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible modificar el documento." }, { status: 500 }); }
+}
+
 export async function DELETE(request: Request) {
   try {
     const id = new URL(request.url).searchParams.get("id")?.trim();

@@ -71,6 +71,13 @@
       "when": 1785274054280,
       "tag": "0009_smart_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785275311168,
+      "tag": "0010_typical_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

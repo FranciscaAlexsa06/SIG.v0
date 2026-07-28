@@ -48,11 +48,22 @@ export async function PATCH(request: Request) {
         fileKey = `attendance/${current.date}/${current.batchId}/${current.workerRut.replace(/[^a-zA-Z0-9-]/g, "_")}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         await getFilesBucket().put(fileKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
       }
-      const [entry] = await getDb().update(attendanceEntries).set({ states, amIn, amOut, pmIn, pmOut, attachmentType, fileName, fileKey, contentType, status: "En revisión" }).where(eq(attendanceEntries.id, id)).returning();
+      const [entry] = await getDb().update(attendanceEntries).set({ states, amIn, amOut, pmIn, pmOut, attachmentType, fileName, fileKey, contentType, status: "En revisión", reviewNote: "" }).where(eq(attendanceEntries.id, id)).returning();
       await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: "Modificar asistencia diaria", recordId: id, detail: `${current.workerName} · ${current.date}` });
       return Response.json({ entry });
     }
-    const body = await request.json() as { batchId?: string; action?: string; reason?: string };
+    const body = await request.json() as { id?: string; batchId?: string; action?: string; reason?: string; states?: string[]; amIn?: string; amOut?: string; pmIn?: string; pmOut?: string };
+    const entryId = String(body.id || "").trim(); const entryAction = String(body.action || "").trim();
+    if (entryId) {
+      if (!["approve", "reject", "update"].includes(entryAction)) return Response.json({ error: "Indica si deseas guardar, aprobar o rechazar al trabajador." }, { status: 400 });
+      const [current] = await getDb().select().from(attendanceEntries).where(eq(attendanceEntries.id, entryId)).limit(1);
+      if (!current) return Response.json({ error: "No se encontró la asistencia del trabajador." }, { status: 404 });
+      const reviewNote = String(body.reason || "").trim(); const status = entryAction === "approve" ? "Aprobada" : entryAction === "reject" ? "Rechazada" : "En revisión";
+      const [entry] = await getDb().update(attendanceEntries).set({ states: body.states?.length ? JSON.stringify(body.states) : current.states, amIn: String(body.amIn ?? current.amIn), amOut: String(body.amOut ?? current.amOut), pmIn: String(body.pmIn ?? current.pmIn), pmOut: String(body.pmOut ?? current.pmOut), reviewNote, status }).where(eq(attendanceEntries.id, entryId)).returning();
+      const actionLabel = entryAction === "approve" ? "Aprobar asistencia individual" : entryAction === "reject" ? "Rechazar asistencia individual" : "Modificar asistencia en revisión";
+      await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: actionLabel, recordId: entryId, detail: `${current.workerName} · ${current.date}${reviewNote ? ` · ${reviewNote}` : ""}` });
+      return Response.json({ entry });
+    }
     const batchId = String(body.batchId || "").trim(); const action = String(body.action || "").trim();
     if (!batchId || !["approve", "reject"].includes(action)) return Response.json({ error: "Selecciona el ingreso y la acción de revisión." }, { status: 400 });
     const current = await getDb().select().from(attendanceEntries).where(eq(attendanceEntries.batchId, batchId));

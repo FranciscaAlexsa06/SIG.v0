@@ -136,6 +136,7 @@ export const attendanceEntries = sqliteTable("attendance_entries", {
   fileKey: text("file_key").notNull().default(""),
   contentType: text("content_type").notNull().default(""),
   status: text("status").notNull().default("En revisión"),
+  reviewNote: text("review_note").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 

@@ -168,7 +168,7 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   assert.match(attendanceApi, /export async function PATCH/);
   assert.match(attendanceApi, /Aprobar asistencia/);
   assert.match(operational, /\/asistencia\/revision\//);
-  assert.match(operational, /Aprobar asistencia/);
+  assert.match(operational, /Revisión por trabajador/);
   assert.match(operational, /Agregar otro contacto de emergencia/);
   assert.match(operational, /WorkerPersonalInformation/);
   assert.match(operational, /Caja Los Andes/);
@@ -252,4 +252,36 @@ test("includes editable masters, medical leaves and daily attendance records", a
   assert.match(cajaApi, /Eliminar registro Caja Los Andes/);
   assert.match(schema, /sqliteTable\("companies"/);
   assert.match(migration, /CREATE TABLE `companies`/);
+});
+
+test("includes individual attendance review, connected dashboard, reports, audit and editable documents", async () => {
+  const [app, operational, attendanceApi, recordsApi, auditApi, schema, migration] = await Promise.all([
+    readFile(new URL("app/SistemaApp.tsx", root), "utf8"),
+    readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
+    readFile(new URL("app/api/attendance/route.ts", root), "utf8"),
+    readFile(new URL("app/api/worker-records/route.ts", root), "utf8"),
+    readFile(new URL("app/api/audit-events/route.ts", root), "utf8"),
+    readFile(new URL("db/schema.ts", root), "utf8"),
+    readFile(new URL("drizzle/0010_typical_monster_badoon.sql", root), "utf8"),
+  ]);
+  assert.match(operational, /Revisión por trabajador/);
+  assert.match(operational, /Observaciones/);
+  assert.match(operational, /Aprobar<\/button>/);
+  assert.match(operational, /Rechazar<\/button>/);
+  assert.match(attendanceApi, /Aprobar asistencia individual/);
+  assert.match(attendanceApi, /Rechazar asistencia individual/);
+  assert.match(attendanceApi, /reviewNote/);
+  assert.match(schema, /reviewNote: text\("review_note"/);
+  assert.match(migration, /ADD `review_note`/);
+  assert.match(app, /pendingTasks/);
+  assert.match(app, /Vacaciones · documento por cargar/);
+  assert.match(app, /activeMedicalLeaves/);
+  assert.match(app, /function ReportsModule/);
+  assert.match(app, /function AuditModule/);
+  assert.match(app, /api\/audit-events/);
+  assert.match(auditApi, /auditEvents/);
+  assert.match(recordsApi, /export async function PATCH/);
+  assert.match(operational, /Modificar documento/);
+  assert.match(operational, /Modificar archivo/);
+  assert.match(operational, /Documento eliminado correctamente/);
 });
