@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const key = new URL(request.url).searchParams.get("key") ?? "";
     if (!key.startsWith("workers/") && !key.startsWith("medical-leaves/") && !key.startsWith("attendance/") && !key.startsWith("document-templates/") && !key.startsWith("caja-los-andes/")) return new Response("Archivo no autorizado.", { status: 403 });
     const object = await getFilesBucket().get(key); if (!object) return new Response("Archivo no encontrado.", { status: 404 });
-    const headers = new Headers(); object.writeHttpMetadata(headers); headers.set("etag", object.httpEtag); headers.set("content-disposition", `inline; filename="${key.split("/").pop()}"`);
+    const headers = new Headers(); headers.set("content-type", object.contentType); headers.set("content-disposition", `inline; filename="${key.split("/").pop()}"`);
     return new Response(object.body, { headers });
   } catch { return new Response("No fue posible descargar el archivo.", { status: 500 }); }
 }

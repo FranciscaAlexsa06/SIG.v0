@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, integer, pgTable, serial, text } from "drizzle-orm/pg-core";
 
-export const processes = sqliteTable("processes", {
+export const processes = pgTable("processes", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),
   rut: text("rut").notNull(),
@@ -14,22 +14,22 @@ export const processes = sqliteTable("processes", {
   status: text("status").notNull().default("Iniciado"),
   stage: text("stage").notNull().default("Revisión de RRHH"),
   requiredDocuments: text("required_documents").notNull().default("[]"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  active: boolean("active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const auditEvents = sqliteTable("audit_events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const auditEvents = pgTable("audit_events", {
+  id: serial("id").primaryKey(),
   userName: text("user_name").notNull(),
   module: text("module").notNull(),
   action: text("action").notNull(),
   recordId: text("record_id").notNull(),
   detail: text("detail").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const workers = sqliteTable("workers", {
+export const workers = pgTable("workers", {
   id: text("id").primaryKey(),
   workerCode: text("worker_code").notNull().default(""),
   firstNames: text("first_names").notNull().default(""),
@@ -61,19 +61,19 @@ export const workers = sqliteTable("workers", {
   bank: text("bank").notNull(),
   accountType: text("account_type").notNull(),
   accountNumber: text("account_number").notNull(),
-  requiresAdvance: integer("requires_advance", { mode: "boolean" }).notNull().default(false),
+  requiresAdvance: boolean("requires_advance").notNull().default(false),
   advanceAmount: integer("advance_amount").notNull().default(0),
   emergencyName: text("emergency_name").notNull(),
   emergencyRelationship: text("emergency_relationship").notNull(),
   emergencyMobile: text("emergency_mobile").notNull(),
   emergencyContacts: text("emergency_contacts").notNull().default("[]"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  active: boolean("active").notNull().default(true),
   source: text("source").notNull().default("Individual"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const workSites = sqliteTable("work_sites", {
+export const workSites = pgTable("work_sites", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   costCenter: text("cost_center").notNull().default(""),
@@ -83,31 +83,31 @@ export const workSites = sqliteTable("work_sites", {
   region: text("region").notNull().default(""),
   commune: text("commune").notNull().default(""),
   status: text("status").notNull().default("Activa"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const userProfiles = sqliteTable("user_profiles", {
+export const userProfiles = pgTable("user_profiles", {
   id: text("id").primaryKey(),
   workerRut: text("worker_rut").notNull().unique(),
   workerName: text("worker_name").notNull(),
   profile: text("profile").notNull(),
   scope: text("scope").notNull().default("Total empresa"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  active: boolean("active").notNull().default(true),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const systemBaseItems = sqliteTable("system_base_items", {
+export const systemBaseItems = pgTable("system_base_items", {
   id: text("id").primaryKey(),
   category: text("category").notNull(),
   name: text("name").notNull(),
   value: text("value").notNull().default(""),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  active: boolean("active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const documentTemplates = sqliteTable("document_templates", {
+export const documentTemplates = pgTable("document_templates", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   documentType: text("document_type").notNull(),
@@ -115,11 +115,11 @@ export const documentTemplates = sqliteTable("document_templates", {
   fileName: text("file_name").notNull(),
   fileKey: text("file_key").notNull(),
   contentType: text("content_type").notNull().default("application/octet-stream"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  active: boolean("active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const attendanceEntries = sqliteTable("attendance_entries", {
+export const attendanceEntries = pgTable("attendance_entries", {
   id: text("id").primaryKey(),
   batchId: text("batch_id").notNull(),
   date: text("date").notNull(),
@@ -137,10 +137,10 @@ export const attendanceEntries = sqliteTable("attendance_entries", {
   contentType: text("content_type").notNull().default(""),
   status: text("status").notNull().default("En revisión"),
   reviewNote: text("review_note").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const workerRecords = sqliteTable("worker_records", {
+export const workerRecords = pgTable("worker_records", {
   id: text("id").primaryKey(),
   workerRut: text("worker_rut").notNull(),
   category: text("category").notNull(),
@@ -154,11 +154,11 @@ export const workerRecords = sqliteTable("worker_records", {
   fileName: text("file_name").notNull().default(""),
   fileKey: text("file_key").notNull().default(""),
   contentType: text("content_type").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const medicalLeaves = sqliteTable("medical_leaves", {
+export const medicalLeaves = pgTable("medical_leaves", {
   id: text("id").primaryKey(),
   workerRut: text("worker_rut").notNull(),
   workerName: text("worker_name").notNull(),
@@ -172,10 +172,10 @@ export const medicalLeaves = sqliteTable("medical_leaves", {
   fileName: text("file_name").notNull().default(""),
   fileKey: text("file_key").notNull().default(""),
   contentType: text("content_type").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const cajaAndesRecords = sqliteTable("caja_andes_records", {
+export const cajaAndesRecords = pgTable("caja_andes_records", {
   id: text("id").primaryKey(),
   period: text("period").notNull(),
   workerRut: text("worker_rut").notNull(),
@@ -186,11 +186,11 @@ export const cajaAndesRecords = sqliteTable("caja_andes_records", {
   fileName: text("file_name").notNull().default(""),
   fileKey: text("file_key").notNull().default(""),
   contentType: text("content_type").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const companies = sqliteTable("companies", {
+export const companies = pgTable("companies", {
   id: text("id").primaryKey(),
   legalName: text("legal_name").notNull(),
   rut: text("rut").notNull().unique(),
@@ -198,12 +198,12 @@ export const companies = sqliteTable("companies", {
   representative: text("representative").notNull().default(""),
   address: text("address").notNull().default(""),
   status: text("status").notNull().default("Activa"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });
 
-export const vacationFolioSequences = sqliteTable("vacation_folio_sequences", {
+export const vacationFolioSequences = pgTable("vacation_folio_sequences", {
   id: text("id").primaryKey(),
   lastFolio: integer("last_folio").notNull().default(578),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP::text`),
 });

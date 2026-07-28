@@ -92,7 +92,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /Cargo eliminado correctamente/);
   assert.match(operational, /Documento eliminado correctamente/);
   assert.match(operational, /normalizedWorkerDate\(profile\?\.entryDate/);
-  assert.match(schema, /active: integer\("active"/);
+  assert.match(schema, /active: boolean\("active"/);
   assert.match(basesMigration, /BANCO DE CHILE/);
   assert.match(basesMigration, /CAPITAL.*11,44%/s);
   assert.match(basesMigration, /CHOFER Y AYUDANTE MECANICO/);
@@ -126,7 +126,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
 
   assert.match(operational, /\/personas\/nueva-solicitud/);
   assert.match(workersApi, /getDb\(\)/);
-  assert.match(schema, /sqliteTable\("workers"/);
+  assert.match(schema, /pgTable\("workers"/);
   assert.ok((operational.match(/useConnectedWorkers\(processes/g) ?? []).length >= 6);
   assert.match(operational, /Seleccionar trabajador/);
   assert.match(operational, /\/personas\/resumen\//);
@@ -136,12 +136,12 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /api\/worker-records/);
   assert.match(operational, /api\/medical-leaves/);
   assert.equal(JSON.parse(hosting).r2, "FILES");
-  assert.match(schema, /sqliteTable\("worker_records"/);
-  assert.match(schema, /sqliteTable\("medical_leaves"/);
-  assert.match(schema, /sqliteTable\("attendance_entries"/);
-  assert.match(schema, /sqliteTable\("system_base_items"/);
-  assert.match(schema, /sqliteTable\("document_templates"/);
-  assert.match(schema, /sqliteTable\("user_profiles"/);
+  assert.match(schema, /pgTable\("worker_records"/);
+  assert.match(schema, /pgTable\("medical_leaves"/);
+  assert.match(schema, /pgTable\("attendance_entries"/);
+  assert.match(schema, /pgTable\("system_base_items"/);
+  assert.match(schema, /pgTable\("document_templates"/);
+  assert.match(schema, /pgTable\("user_profiles"/);
   for (const label of ["Bases del sistema", "Maestros", "Modificación masiva", "Seleccionar obra para modificar", "Vista general mensual", "Vista individual", "Archivo del trabajador"]) assert.match(`${app}\n${operational}`, new RegExp(label, "i"));
   assert.match(operational, /Solo el RUT es necesario/);
   assert.match(workersApi, /isBulkUpload \? !clean\(payload\.identityNumber\) : missingRequired\(payload\)/);
@@ -183,7 +183,7 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   assert.match(operational, /Monto seguro de vida/);
   assert.match(operational, /latestCajaAndes = cajaAndesRecords\.find/);
   assert.match(operational, /displayedCajaAndesAmount/);
-  assert.match(schema, /sqliteTable\("caja_andes_records"/);
+  assert.match(schema, /pgTable\("caja_andes_records"/);
   assert.match(schema, /emergencyContacts: text\("emergency_contacts"/);
   assert.match(recordsApi, /25 \* 1024 \* 1024/);
   for (const holiday of ["Año Nuevo", "Viernes Santo", "Independencia Nacional", "Navidad"]) assert.match(migration, new RegExp(holiday));
@@ -250,7 +250,7 @@ test("includes editable masters, medical leaves and daily attendance records", a
   assert.match(companiesApi, /export async function PATCH/);
   assert.match(companiesApi, /export async function DELETE/);
   assert.match(cajaApi, /Eliminar registro Caja Los Andes/);
-  assert.match(schema, /sqliteTable\("companies"/);
+  assert.match(schema, /pgTable\("companies"/);
   assert.match(migration, /CREATE TABLE `companies`/);
 });
 

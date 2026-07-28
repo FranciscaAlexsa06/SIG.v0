@@ -256,8 +256,15 @@ export function identifiedWorkSite(value: string, catalog: WorkSiteRecord[]) {
   return site?.costCenter || "";
 }
 
-export function identifiedWorkSites(values: string[], catalog: WorkSiteRecord[]) {
-  return [...new Set(values.map((value) => identifiedWorkSite(value, catalog)).filter(Boolean))].join(" / ");
+export function identifiedWorkSites(values: string[] | string, catalog: WorkSiteRecord[]) {
+  let normalized = Array.isArray(values) ? values : [values];
+  if (typeof values === "string" && values.trim().startsWith("[")) {
+    try {
+      const parsed = JSON.parse(values);
+      if (Array.isArray(parsed)) normalized = parsed.map(String);
+    } catch {}
+  }
+  return [...new Set(normalized.map((value) => identifiedWorkSite(value, catalog)).filter(Boolean))].join(" / ");
 }
 
 function registeredWorkSiteCodes(worker: Worker, catalog: WorkSiteRecord[]) {
@@ -287,7 +294,7 @@ const recordTypes: Record<string, string[]> = {
   Finiquito: ["Finiquito", "Reserva de derechos", "Reclamo DT", "Otro reclamo"],
 };
 
-function metadataOf(record?: WorkerRecord) { try { return JSON.parse(record?.metadata || "{}"); } catch { return {}; } }
+function metadataOf(record?: WorkerRecord | null) { try { return JSON.parse(record?.metadata || "{}"); } catch { return {}; } }
 function fileUrl(key: string) { return `/api/worker-records/file?key=${encodeURIComponent(key)}`; }
 function downloadStoredFile(key: string, fileName = "respaldo") { const link = document.createElement("a"); link.href = fileUrl(key); link.download = fileName; link.click(); }
 function normalizedWorkerDate(value: string) { const raw = String(value ?? "").trim(); if (!raw) return ""; const iso = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/); if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`; const local = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/); if (local) return `${local[3]}-${local[2].padStart(2, "0")}-${local[1].padStart(2, "0")}`; if (/^\d{5}$/.test(raw)) { const date = new Date(Date.UTC(1899, 11, 30) + Number(raw) * 86_400_000); return date.toISOString().slice(0, 10); } return raw; }
