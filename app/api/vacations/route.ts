@@ -91,7 +91,7 @@ export async function PATCH(request: Request) {
       return Response.json({ record: updated });
     }
     if (action !== "approve") return Response.json({ error: "Indica si deseas aprobar o rechazar." }, { status: 400 });
-    if (!validDate(record.issueDate) || !validDate(record.expiryDate) || record.issueDate > record.expiryDate) return Response.json({ error: "Las fechas de esta solicitud son inválidas. Debes rechazarla y crear una nueva con el período correcto." }, { status: 400 });
+    if (!validDate(record.issueDate) || !validDate(record.expiryDate) || record.issueDate > record.expiryDate) return Response.json({ error: "Las fechas de esta solicitud son inválidas. Usa Modificar solicitud antes de aprobarla." }, { status: 400 });
     const days = businessDaysBetween(record.issueDate, record.expiryDate, await holidayDates()); const balance = await balanceFor(record.workerRut, record.id);
     if (days > balance.available) return Response.json({ error: `No se puede aprobar: solicita ${days} días y el saldo disponible es ${balance.available.toLocaleString("es-CL")} días.` }, { status: 400 });
     const newBalance = Math.round((balance.available - days) * 100) / 100;

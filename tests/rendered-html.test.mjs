@@ -132,7 +132,7 @@ test("includes the requested connected dashboard and hiring flow", async () => {
   assert.match(operational, /\/personas\/resumen\//);
   assert.match(app, /fetch\("\/api\/workers"/);
   assert.match(app, /\$\{men\} hombres · \$\{women\} mujeres/);
-  for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Contratos y anexos", "Cumplimiento personal", "Seleccionar trabajador"]) assert.match(operational, new RegExp(label, "i"));
+  for (const label of ["Información personal", "Asignación empresa", "Certificaciones / Cursos", "Exámenes", "Observaciones", "Historial", "Documentaci", "Cumplimiento personal", "Seleccionar trabajador"]) assert.match(operational, new RegExp(label, "i"));
   assert.match(operational, /api\/worker-records/);
   assert.match(operational, /api\/medical-leaves/);
   assert.equal(JSON.parse(hosting).r2, "FILES");
@@ -162,6 +162,10 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   ]);
 
   assert.match(attendanceApi, /rowsPerQuery = 6/);
+  assert.match(attendanceApi, /export async function PATCH/);
+  assert.match(attendanceApi, /Aprobar asistencia/);
+  assert.match(operational, /\/asistencia\/revision\//);
+  assert.match(operational, /Aprobar asistencia/);
   assert.match(operational, /Agregar otro contacto de emergencia/);
   assert.match(operational, /WorkerPersonalInformation/);
   assert.match(operational, /Caja Los Andes/);
@@ -183,7 +187,8 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
 });
 
 test("includes sequential vacation folios, approvals and approved-only balance deductions", async () => {
-  const [operational, vacationsApi, schema, migration] = await Promise.all([
+  const [app, operational, vacationsApi, schema, migration] = await Promise.all([
+    readFile(new URL("app/SistemaApp.tsx", root), "utf8"),
     readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
     readFile(new URL("app/api/vacations/route.ts", root), "utf8"),
     readFile(new URL("db/schema.ts", root), "utf8"),
@@ -193,7 +198,17 @@ test("includes sequential vacation folios, approvals and approved-only balance d
   assert.match(migration, /last_folio.*578/s);
   assert.match(migration, /ROW_NUMBER\(\) OVER/);
   assert.match(operational, /Solicitudes pendientes/);
-  assert.match(operational, /Corregir fechas/);
+  assert.match(app, /function WorkInbox/);
+  assert.match(app, /Vacaciones .* aproba.* pendiente/);
+  assert.match(app, /\/vacaciones\/pendientes/);
+  assert.match(operational, /Modificar solicitud/);
+  assert.match(operational, /Documentos por cargar/);
+  assert.match(operational, /Cargar PDF aprobado/);
+  assert.match(operational, /Disponible despu.* de aprobar/);
+  for (const status of ["Plazo Contrato", "Plazo Anexo", "Indefinido", "Con Carta", "Con Finiquito"]) assert.match(operational, new RegExp(status));
+  assert.match(operational, /status-chip--contract/);
+  assert.match(operational, /requiredLabor = \["Contrato", "Ingreso a la DT"/);
+  assert.match(operational, /profile\?\.contractTerm === "Indefinido" \? \["Anexo Indefinido"\]/);
   assert.match(operational, /DD-MM-AAAA/);
   assert.match(operational, /Saldo actual/);
   assert.match(operational, /Nuevo saldo/);

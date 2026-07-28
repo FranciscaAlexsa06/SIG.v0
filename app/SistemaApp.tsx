@@ -18,6 +18,21 @@ type ProcessRecord = {
   createdAt: string;
 };
 
+type VacationInboxRecord = {
+  id: string;
+  workerRut: string;
+  category: string;
+  subtype: string;
+  title: string;
+  issueDate: string;
+  expiryDate: string;
+  status: string;
+  metadata: string;
+  fileKey: string;
+};
+
+type AttendanceInboxEntry = { id: string; batchId: string; date: string; workerName: string; costCenter: string; status: string };
+
 type HiringDraft = {
   rut: string;
   firstName: string;
@@ -112,6 +127,8 @@ function Header({ route, setRoute, name, onLogout }: { route: string; setRoute: 
     : route.startsWith("/vacaciones/nueva-solicitud") ? { eyebrow: "Vacaciones · Solicitud", title: "Nueva solicitud de vacaciones", subtitle: "Calcula días hábiles y genera el folio del proceso." }
     : route === "/licencias/nueva" ? { eyebrow: "Licencias Médicas · Registro", title: "Nueva licencia médica", subtitle: "Registra el período, folio y especialidad del trabajador." }
     : route.startsWith("/documentos/solicitud/") ? { eyebrow: "Gestión Documental · Solicitud", title: "Nueva solicitud documental", subtitle: "Completa los antecedentes del documento seleccionado." }
+    : route.startsWith("/vacaciones/") ? routeTitles["/vacaciones"]
+    : route.startsWith("/asistencia/") ? routeTitles["/asistencia"]
     : route.startsWith("/reportes/") ? { eyebrow: "Reportes · Vista previa", title: "Vista previa del reporte", subtitle: "Revisa los campos antes de exportar." }
     : route.startsWith("/administracion/") ? { eyebrow: "Administración · Maestro", title: "Configuración del maestro", subtitle: "Gestiona definiciones compartidas sin borrar su historial." }
     : routeTitles[route] ?? routeTitles["/dashboard"];
@@ -239,6 +256,34 @@ function exportEmptyReport(name: string) {
   link.href = url; link.download = `reporte-${name.toLowerCase().replaceAll(" ", "-")}.csv`; link.click(); URL.revokeObjectURL(url);
 }
 
+function WorkInbox({ processes, setRoute }: { processes: ProcessRecord[]; setRoute: (path: string) => void }) {
+  const [vacationRecords, setVacationRecords] = useState<VacationInboxRecord[]>([]);
+  const [workers, setWorkers] = useState<WorkerProfile[]>([]);
+  const [attendanceEntries, setAttendanceEntries] = useState<AttendanceInboxEntry[]>([]);
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/worker-records", { cache: "no-store" }).then((response) => response.ok ? response.json() : { records: [] }),
+      fetch("/api/workers", { cache: "no-store" }).then((response) => response.ok ? response.json() : { workers: [] }),
+      fetch("/api/attendance", { cache: "no-store" }).then((response) => response.ok ? response.json() : { entries: [] }),
+    ]).then(([recordData, workerData, attendanceData]) => { setVacationRecords(recordData.records ?? []); setWorkers(workerData.workers ?? []); setAttendanceEntries(attendanceData.entries ?? []); }).catch(() => { setVacationRecords([]); setWorkers([]); setAttendanceEntries([]); });
+  }, []);
+  const metadata = (record: VacationInboxRecord) => { try { return JSON.parse(record.metadata || "{}") as { supportFor?: string; businessDays?: number; folio?: string | number }; } catch { return {}; } };
+  const requests = vacationRecords.filter((record) => record.subtype === "Solicitud de vacaciones");
+  const pendingApprovals = requests.filter((record) => ["Pendiente de aprobación", "Pendiente de firma"].includes(record.status));
+  const pendingDocuments = requests.filter((record) => ["Aprobada", "Firmado", "Firmada", "Completado"].includes(record.status) && !record.fileKey && !vacationRecords.some((support) => metadata(support).supportFor === record.id && support.fileKey));
+  const otherApprovals = vacationRecords.filter((record) => record.subtype !== "Solicitud de vacaciones" && ["Pendiente de aprobación", "Pendiente de firma", "En revisión"].includes(record.status));
+  const attendanceBatches = [...new Map(attendanceEntries.filter((entry) => entry.status === "En revisión").map((entry) => [entry.batchId, attendanceEntries.filter((item) => item.batchId === entry.batchId)])).entries()];
+  const workerName = (rut: string) => { const worker = workers.find((item) => item.identityNumber === rut); return worker ? [worker.firstNames, worker.lastNames].filter(Boolean).join(" ") || worker.fullName : rut; };
+  const total = processes.length + pendingApprovals.length + pendingDocuments.length + otherApprovals.length + attendanceBatches.length;
+  return <section className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Prioridad y vencimiento</p><h2>Mis tareas</h2></div><span className="count-badge">{total} tareas</span></div>{total ? <div className="record-list">
+    {pendingApprovals.map((record) => <article key={record.id}><span className="record-icon">☼</span><div><small>Vacaciones · aprobación pendiente</small><strong>{workerName(record.workerRut)}</strong><p>Folio {metadata(record).folio || record.title} · {record.issueDate.split("-").reverse().join("-")} al {record.expiryDate.split("-").reverse().join("-")}</p></div><span className="status-chip status-chip--draft">{record.status}</span><button className="table-action" onClick={() => go("/vacaciones/pendientes", setRoute)}>Revisar solicitud</button></article>)}
+    {pendingDocuments.map((record) => <article key={`document-${record.id}`}><span className="record-icon">▤</span><div><small>Vacaciones · documento aprobado pendiente</small><strong>{workerName(record.workerRut)}</strong><p>Folio {metadata(record).folio || record.title} · cargar PDF para habilitar la descarga</p></div><span className="status-chip">Pendiente de documento</span><button className="table-action" onClick={() => go("/vacaciones/documentos-aprobados", setRoute)}>Cargar documento</button></article>)}
+    {otherApprovals.map((record) => <article key={`approval-${record.id}`}><span className="record-icon">✓</span><div><small>{record.category} · revisión pendiente</small><strong>{workerName(record.workerRut)}</strong><p>{record.title || record.subtype}</p></div><span className="status-chip status-chip--draft">{record.status}</span><button className="table-action" onClick={() => go(record.category === "Vacaciones" ? "/vacaciones/pendientes" : "/documentos", setRoute)}>Revisar</button></article>)}
+    {attendanceBatches.map(([batchId, batch]) => <article key={batchId}><span className="record-icon">◷</span><div><small>Asistencia · revisión pendiente</small><strong>{batch.length} trabajador(es)</strong><p>{batch[0].date.split("-").reverse().join("-")} · {batch[0].costCenter || "Total empresa"}</p></div><span className="status-chip status-chip--draft">En revisión</span><button className="table-action" onClick={() => go(`/asistencia/revision/${encodeURIComponent(batchId)}`, setRoute)}>Revisar asistencia</button></article>)}
+    {processes.map((process) => <article key={process.id}><span className="record-icon">✓</span><div><small>Nueva contratación</small><strong>{process.personName}</strong><p>{process.stage} · {process.costCenter}</p></div><span className="status-chip">{process.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${process.id}`, setRoute)}>Continuar</button></article>)}
+  </div> : <EmptyTable columns={["Tarea", "Trabajador", "Responsable", "Fecha límite", "Prioridad", "Estado", "Acción"]} message="No tienes tareas pendientes." />}</section>;
+}
+
 function GenericModule({ route, setRoute, processes }: { route: string; setRoute: (v: string) => void; processes: ProcessRecord[] }) {
   if (route.startsWith("/carpeta-laboral")) return <LaborFolderModule processes={processes} setRoute={setRoute} />;
   if (route.startsWith("/asistencia")) return <AttendanceModule route={route} processes={processes} setRoute={setRoute} />;
@@ -252,7 +297,7 @@ function GenericModule({ route, setRoute, processes }: { route: string; setRoute
   if (route === "/administracion/maestros-documentos") return <DocumentTemplatesModule setRoute={setRoute} />;
   if (route.startsWith("/administracion/empresas")) return <CompaniesModule route={route} setRoute={setRoute} />;
   if (route.startsWith("/administracion/obras-y-centros-de-costo")) return <WorkSitesModule route={route} setRoute={setRoute} />;
-  if (route === "/bandeja") return <section className="panel"><div className="panel-heading"><div><p className="page-eyebrow">Prioridad y vencimiento</p><h2>Mis tareas</h2></div><span className="count-badge">{processes.length} tareas</span></div>{processes.length ? <div className="record-list">{processes.map((p) => <article key={p.id}><span className="record-icon">✓</span><div><small>Nueva contratación</small><strong>{p.personName}</strong><p>{p.stage} · {p.costCenter}</p></div><span className="status-chip">{p.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute)}>Continuar</button></article>)}</div> : <EmptyTable columns={["Tarea", "Trabajador", "Responsable", "Fecha límite", "Prioridad", "Estado", "Acción"]} message="No tienes tareas pendientes." />}</section>;
+  if (route === "/bandeja") return <WorkInbox processes={processes} setRoute={setRoute} />;
 
   if (route === "/procesos") return <section className="panel"><div className="section-actions"><div><p className="page-eyebrow">Todos los flujos</p><h2>Procesos</h2></div><button className="primary-button" onClick={() => go("/procesos/nueva-contratacion", setRoute)}>＋ Nueva contratación</button></div><Toolbar><select><option>Todos los tipos</option><option>Nueva contratación</option><option>Anexo</option><option>Finiquito</option></select></Toolbar>{processes.length ? <div className="record-list">{processes.map((p) => <article key={p.id}><span className="record-icon">↻</span><div><small>{p.id}</small><strong>{p.type} · {p.personName}</strong><p>{p.company} · {p.costCenter} · {p.stage}</p></div><span className="status-chip">{p.status}</span><button className="table-action" onClick={() => go(`/procesos/nueva-contratacion?id=${p.id}`, setRoute)}>Abrir</button></article>)}</div> : <EmptyTable columns={["Proceso", "Trabajador", "Solicitante", "Responsable", "Etapa", "Fecha límite", "Estado", "Acciones"]} message="No hay procesos registrados." />}</section>;
 

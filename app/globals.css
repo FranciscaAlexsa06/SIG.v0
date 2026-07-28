@@ -123,7 +123,7 @@ input:focus,select:focus { border-color:var(--blue); box-shadow:0 0 0 4px #155ee
 .panel-heading,.section-actions { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .panel-heading h2,.section-actions h2 { margin:0; font-size:18px; letter-spacing:-.02em; }
 .status-chip,.count-badge { display:inline-flex; align-items:center; min-height:26px; padding:0 10px; border-radius:20px; color:#155eef; background:#eff6ff; font-size:10px; font-weight:800; white-space:nowrap; }
-.status-chip--neutral { color:#667085; background:#f2f4f7; }.status-chip--draft{color:#9a6700;background:#fff8c5}.status-chip--secure{color:#027a48;background:#ecfdf3}
+.status-chip--neutral { color:#667085; background:#f2f4f7; }.status-chip--draft{color:#9a6700;background:#fff8c5}.status-chip--secure{color:#027a48;background:#ecfdf3}.status-chip--contract{color:#4338ca;background:#eef2ff}
 .count-badge { color:#667085; background:#f2f4f7; }
 .empty-chart { min-height:250px; display:grid; place-items:center; align-content:center; text-align:center; }
 .chart-bars { height:80px; display:flex; align-items:flex-end; gap:7px; margin-bottom:18px; }

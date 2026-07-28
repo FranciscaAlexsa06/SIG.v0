@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb, getFilesBucket } from "../../../db";
 import { attendanceEntries, auditEvents } from "../../../db/schema";
 
@@ -30,4 +30,19 @@ export async function POST(request: Request) {
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: "Enviar a revisión", recordId: batchId, detail: `${saved.length} trabajador(es) informados el ${date}` });
     return Response.json({ entries: saved }, { status: 201 });
   } catch (error) { console.error("attendance-save-failed", error); return Response.json({ error: "No fue posible guardar la asistencia. Vuelve a intentarlo; si continúa, informa la fecha y la obra seleccionada." }, { status: 500 }); }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json() as { batchId?: string; action?: string; reason?: string };
+    const batchId = String(body.batchId || "").trim(); const action = String(body.action || "").trim();
+    if (!batchId || !["approve", "reject"].includes(action)) return Response.json({ error: "Selecciona el ingreso y la acción de revisión." }, { status: 400 });
+    const current = await getDb().select().from(attendanceEntries).where(eq(attendanceEntries.batchId, batchId));
+    if (!current.length) return Response.json({ error: "No se encontró el ingreso de asistencia." }, { status: 404 });
+    if (!current.some((entry) => entry.status === "En revisión")) return Response.json({ error: "Este ingreso ya fue resuelto." }, { status: 409 });
+    const status = action === "approve" ? "Aprobada" : "Rechazada"; const reason = String(body.reason || "").trim();
+    await getDb().update(attendanceEntries).set({ status }).where(eq(attendanceEntries.batchId, batchId));
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: action === "approve" ? "Aprobar asistencia" : "Rechazar asistencia", recordId: batchId, detail: reason || `${current.length} trabajador(es)` });
+    return Response.json({ status, updated: current.length });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible resolver la asistencia." }, { status: 500 }); }
 }
