@@ -6,10 +6,12 @@ import postgres from "postgres";
 const required = [
   "DATABASE_URL",
   "NEXT_PUBLIC_SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
 ];
 
 const missing = required.filter((name) => !process.env[name]);
+const secretKey =
+  process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!secretKey) missing.push("SUPABASE_SECRET_KEY");
 if (missing.length) {
   throw new Error(`Faltan estas variables en .env.local: ${missing.join(", ")}`);
 }
@@ -25,7 +27,7 @@ try {
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    secretKey,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
   const bucketName = process.env.SUPABASE_DOCUMENTS_BUCKET ?? "sig-documents";

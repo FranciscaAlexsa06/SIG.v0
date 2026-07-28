@@ -11,7 +11,7 @@ documentos se guardan en un proyecto gratuito de Supabase.
 3. En la configuración del proyecto, copiar:
    - la dirección de conexión de la base de datos;
    - la dirección pública del proyecto;
-   - la llave `service_role`.
+   - una llave privada nueva con formato `sb_secret_...`.
 4. Copiar `.env.example` como `.env.local` y completar esos valores.
 5. Ejecutar `pnpm setup:supabase` una sola vez. Esto crea las tablas y una
    bóveda privada llamada `sig-documents`.
@@ -22,10 +22,10 @@ En **Settings > Environment Variables** agregar:
 
 - `DATABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY`
 - `SUPABASE_DOCUMENTS_BUCKET` con el valor `sig-documents`
 
-No se debe publicar ni enviar por correo la llave `service_role`.
+No se debe publicar ni enviar por correo la llave privada `sb_secret_...`.
 
 ## 3. Publicar la rama
 

@@ -35,14 +35,15 @@ export function getDb() {
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
+  const secretKey =
+    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !secretKey) {
     throw new Error(
       "Falta configurar la bóveda privada de documentos de Supabase en Vercel.",
     );
   }
 
-  globalForDatabase.sigSupabaseAdmin ??= createClient(url, serviceRoleKey, {
+  globalForDatabase.sigSupabaseAdmin ??= createClient(url, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   return globalForDatabase.sigSupabaseAdmin;
