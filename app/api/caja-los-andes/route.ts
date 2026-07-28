@@ -5,6 +5,10 @@ import { auditEvents, cajaAndesRecords } from "../../../db/schema";
 type CajaRow = { workerRut?: string; workerName?: string; credits?: string; insurances?: string; detail?: string };
 function clean(value: unknown) { return String(value ?? "").trim(); }
 function normalizeRut(value: unknown) { return clean(value).replace(/[.\s]/g, "").toUpperCase(); }
+function normalizeAmount(value: unknown) {
+  const digits = clean(value).replace(/[^\d]/g, "");
+  return digits ? String(Number(digits)) : "";
+}
 
 export async function GET(request: Request) {
   try {
@@ -18,6 +22,19 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if ((request.headers.get("content-type") || "").includes("application/json")) {
+      const body = await request.json() as CajaRow & { period?: string };
+      const period = clean(body.period); const workerRut = normalizeRut(body.workerRut); const workerName = clean(body.workerName);
+      const credits = normalizeAmount(body.credits); const insurances = normalizeAmount(body.insurances); const detail = clean(body.detail);
+      if (!/^\d{4}-\d{2}$/.test(period) || !workerRut || !workerName) return Response.json({ error: "Selecciona el mes y el trabajador." }, { status: 400 });
+      if (!Number(credits || 0) && !Number(insurances || 0)) return Response.json({ error: "Ingresa un monto de crédito o de seguro de vida mayor a cero." }, { status: 400 });
+      const [existing] = await getDb().select().from(cajaAndesRecords).where(and(eq(cajaAndesRecords.workerRut, workerRut), eq(cajaAndesRecords.period, period))).limit(1);
+      const [record] = existing
+        ? await getDb().update(cajaAndesRecords).set({ workerName, credits, insurances, detail, updatedAt: new Date().toISOString() }).where(eq(cajaAndesRecords.id, existing.id)).returning()
+        : await getDb().insert(cajaAndesRecords).values({ id: `CLA-${crypto.randomUUID().slice(0, 10).toUpperCase()}`, period, workerRut, workerName, credits, insurances, detail }).returning();
+      await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Administración", action: existing ? "Modificar montos Caja Los Andes" : "Agregar montos Caja Los Andes", recordId: record.id, detail: `${period}: ${workerRut}` });
+      return Response.json({ record }, { status: existing ? 200 : 201 });
+    }
     const form = await request.formData(); const period = clean(form.get("period")); const file = form.get("file");
     const rawRows = JSON.parse(clean(form.get("rows")) || "[]") as CajaRow[];
     if (!/^\d{4}-\d{2}$/.test(period) || !(file instanceof File) || !file.size || !rawRows.length) return Response.json({ error: "Selecciona el mes, el archivo y revisa que contenga trabajadores." }, { status: 400 });
@@ -32,7 +49,7 @@ export async function POST(request: Request) {
     await getFilesBucket().put(fileKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
     const saved = [];
     for (const row of rows) {
-      const [record] = await getDb().insert(cajaAndesRecords).values({ id: `CLA-${crypto.randomUUID().slice(0, 10).toUpperCase()}`, period, workerRut: normalizeRut(row.workerRut), workerName: clean(row.workerName), credits: clean(row.credits), insurances: clean(row.insurances), detail: clean(row.detail), fileName: file.name, fileKey, contentType }).returning();
+      const [record] = await getDb().insert(cajaAndesRecords).values({ id: `CLA-${crypto.randomUUID().slice(0, 10).toUpperCase()}`, period, workerRut: normalizeRut(row.workerRut), workerName: clean(row.workerName), credits: normalizeAmount(row.credits), insurances: normalizeAmount(row.insurances), detail: clean(row.detail), fileName: file.name, fileKey, contentType }).returning();
       saved.push(record);
     }
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Administración", action: "Carga mensual Caja Los Andes", recordId: uploadId, detail: `${period}: ${saved.length} trabajador(es)` });

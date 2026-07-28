@@ -170,6 +170,12 @@ test("includes full attendance, editable bases, multiple contacts and Caja Los A
   assert.match(basesApi, /export async function PATCH/);
   assert.match(basesApi, /No se permiten registros repetidos/);
   assert.match(cajaApi, /Carga mensual Caja Los Andes/);
+  assert.match(cajaApi, /Agregar montos Caja Los Andes/);
+  assert.match(cajaApi, /normalizeAmount/);
+  assert.match(operational, /Agregar montos por trabajador/);
+  assert.match(operational, /Monto seguro de vida/);
+  assert.match(operational, /latestCajaAndes = cajaAndesRecords\.find/);
+  assert.match(operational, /displayedCajaAndesAmount/);
   assert.match(schema, /sqliteTable\("caja_andes_records"/);
   assert.match(schema, /emergencyContacts: text\("emergency_contacts"/);
   assert.match(recordsApi, /25 \* 1024 \* 1024/);
