@@ -11,11 +11,29 @@ const globalForDatabase = globalThis as typeof globalThis & {
   sigSupabaseAdmin?: SupabaseClient;
 };
 
+function databaseConnectionUrl() {
+  if (
+    process.env.POSTGRES_HOST &&
+    process.env.POSTGRES_USER &&
+    process.env.POSTGRES_PASSWORD
+  ) {
+    const url = new URL("postgresql://placeholder");
+    url.hostname = process.env.POSTGRES_HOST;
+    url.port = process.env.POSTGRES_PORT ?? "6543";
+    url.username = process.env.POSTGRES_USER;
+    url.password = process.env.POSTGRES_PASSWORD;
+    url.pathname = `/${process.env.POSTGRES_DATABASE ?? "postgres"}`;
+    url.searchParams.set("sslmode", "require");
+    return url.toString();
+  }
+  return process.env.DATABASE_URL;
+}
+
 export function getDb() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = databaseConnectionUrl();
   if (!databaseUrl) {
     throw new Error(
-      "Falta configurar DATABASE_URL en Vercel. La aplicación está lista, pero aún no tiene una base de datos de pruebas conectada.",
+      "Falta configurar la conexión de Supabase en Vercel.",
     );
   }
 

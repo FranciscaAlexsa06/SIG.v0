@@ -1,10 +1,28 @@
 import { readFile } from "node:fs/promises";
 import postgres from "postgres";
 
-const databaseUrl = process.env.DATABASE_URL;
+function databaseConnectionUrl() {
+  if (
+    process.env.POSTGRES_HOST &&
+    process.env.POSTGRES_USER &&
+    process.env.POSTGRES_PASSWORD
+  ) {
+    const url = new URL("postgresql://placeholder");
+    url.hostname = process.env.POSTGRES_HOST;
+    url.port = process.env.POSTGRES_PORT ?? "6543";
+    url.username = process.env.POSTGRES_USER;
+    url.password = process.env.POSTGRES_PASSWORD;
+    url.pathname = `/${process.env.POSTGRES_DATABASE ?? "postgres"}`;
+    url.searchParams.set("sslmode", "require");
+    return url.toString();
+  }
+  return process.env.DATABASE_URL;
+}
+
+const databaseUrl = databaseConnectionUrl();
 
 if (!databaseUrl) {
-  console.log("DATABASE_URL no está disponible; se omite la preparación remota.");
+  console.log("La conexión de Supabase no está disponible; se omite la preparación remota.");
   process.exit(0);
 }
 
@@ -56,7 +74,11 @@ try {
     error && typeof error === "object" && "code" in error
       ? String(error.code)
       : "desconocido";
-  throw new Error(`No fue posible preparar Supabase (código ${code}).`);
+  const reason =
+    code === "28P01"
+      ? "Supabase rechazó el usuario o la contraseña"
+      : "no se pudo completar la conexión";
+  throw new Error(`No fue posible preparar Supabase: ${reason} (código ${code}).`);
 } finally {
   await sql.end();
 }

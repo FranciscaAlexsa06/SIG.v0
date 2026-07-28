@@ -20,7 +20,11 @@ documentos se guardan en un proyecto gratuito de Supabase.
 
 En **Settings > Environment Variables** agregar:
 
-- `DATABASE_URL`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DATABASE`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SECRET_KEY`
 - `SUPABASE_DOCUMENTS_BUCKET` con el valor `sig-documents`
