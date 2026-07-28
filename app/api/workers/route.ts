@@ -48,6 +48,26 @@ function missingRequired(payload: WorkerPayload) { return requiredKeys.some((key
 
 function clean(value: unknown) { return String(value ?? "").trim(); }
 
+function safeDatabaseError(error: unknown, fallback: string) {
+  const cause =
+    error instanceof Error && error.cause && typeof error.cause === "object"
+      ? error.cause
+      : error;
+  const code =
+    cause && typeof cause === "object" && "code" in cause
+      ? String(cause.code)
+      : "";
+  const messages: Record<string, string> = {
+    "22P02": "Uno de los valores numéricos o fechas tiene un formato inválido.",
+    "23505": "Ya existe otro trabajador con el mismo RUT o código único.",
+    "42P01": "La tabla de trabajadores todavía no ha sido creada en Supabase.",
+    "42703": "La tabla de trabajadores está desactualizada y le falta una columna.",
+    "42P10": "La tabla de trabajadores está desactualizada y no permite identificar registros repetidos.",
+    "42501": "Supabase rechazó la operación por falta de permisos.",
+  };
+  return code ? `${messages[code] ?? fallback} Código: ${code}.` : fallback;
+}
+
 function normalizeWorkerDate(value: unknown) {
   const raw = clean(value);
   if (!raw) return "";
@@ -95,13 +115,13 @@ export async function PATCH(request: Request) {
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: "Edición de ficha", recordId: record.id, detail: `Ficha actualizada sin eliminar antecedentes: ${record.fullName}` });
     return Response.json({ worker: record });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "No fue posible editar al trabajador." }, { status: 500 });
+    return Response.json({ error: safeDatabaseError(error, "No fue posible editar al trabajador.") }, { status: 500 });
   }
 }
 
 export async function GET() {
   try { return Response.json({ workers: await getDb().select().from(workers).orderBy(desc(workers.createdAt)).limit(2000) }, { headers: { "cache-control": "no-store" } }); }
-  catch (error) { return Response.json({ workers: [], error: error instanceof Error ? error.message : "No fue posible consultar los trabajadores." }, { status: 503 }); }
+  catch (error) { return Response.json({ workers: [], error: safeDatabaseError(error, "No fue posible consultar los trabajadores.") }, { status: 503 }); }
 }
 
 export async function DELETE(request: Request) {
@@ -113,7 +133,7 @@ export async function DELETE(request: Request) {
     await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: "Eliminar ficha", recordId: record.id, detail: `Ficha eliminada: ${record.fullName || record.identityNumber}` });
     return Response.json({ deleted: true, worker: record });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar la ficha." }, { status: 500 });
+    return Response.json({ error: safeDatabaseError(error, "No fue posible eliminar la ficha.") }, { status: 500 });
   }
 }
 
@@ -139,6 +159,6 @@ export async function POST(request: Request) {
     await db.insert(auditEvents).values({ userName: "Francisca", module: "Trabajadores", action: payloads.length > 1 ? "Carga masiva" : "Ingreso individual", recordId: saved[0]?.id ?? "", detail: `${saved.length} trabajador(es) ingresado(s)` });
     return Response.json({ workers: saved }, { status: 201 });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "No fue posible ingresar los trabajadores." }, { status: 500 });
+    return Response.json({ error: safeDatabaseError(error, "No fue posible ingresar los trabajadores.") }, { status: 500 });
   }
 }
