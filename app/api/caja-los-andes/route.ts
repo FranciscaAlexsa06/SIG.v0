@@ -59,7 +59,18 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const period = clean(new URL(request.url).searchParams.get("period"));
+    const url = new URL(request.url); const id = clean(url.searchParams.get("id")); const period = clean(url.searchParams.get("period"));
+    if (id) {
+      const [current] = await getDb().select().from(cajaAndesRecords).where(eq(cajaAndesRecords.id, id)).limit(1);
+      if (!current) return Response.json({ error: "No se encontró el registro de Caja Los Andes." }, { status: 404 });
+      await getDb().delete(cajaAndesRecords).where(eq(cajaAndesRecords.id, id));
+      if (current.fileKey) {
+        const remaining = await getDb().select().from(cajaAndesRecords).where(eq(cajaAndesRecords.fileKey, current.fileKey)).limit(1);
+        if (!remaining.length) await getFilesBucket().delete(current.fileKey);
+      }
+      await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Administración", action: "Eliminar registro Caja Los Andes", recordId: id, detail: `${current.period}: ${current.workerRut}` });
+      return Response.json({ deleted: 1 });
+    }
     if (!period) return Response.json({ error: "Selecciona el mes que deseas eliminar." }, { status: 400 });
     const existing = await getDb().select().from(cajaAndesRecords).where(eq(cajaAndesRecords.period, period));
     for (const fileKey of [...new Set(existing.map((record) => record.fileKey).filter(Boolean))]) await getFilesBucket().delete(fileKey);

@@ -189,6 +189,18 @@ export const cajaAndesRecords = sqliteTable("caja_andes_records", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const companies = sqliteTable("companies", {
+  id: text("id").primaryKey(),
+  legalName: text("legal_name").notNull(),
+  rut: text("rut").notNull().unique(),
+  tradeName: text("trade_name").notNull().default(""),
+  representative: text("representative").notNull().default(""),
+  address: text("address").notNull().default(""),
+  status: text("status").notNull().default("Activa"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const vacationFolioSequences = sqliteTable("vacation_folio_sequences", {
   id: text("id").primaryKey(),
   lastFolio: integer("last_folio").notNull().default(578),

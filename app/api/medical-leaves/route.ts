@@ -20,3 +20,40 @@ export async function POST(request: Request) {
     return Response.json({ medicalLeave: record ?? null }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible guardar la licencia médica." }, { status: 500 }); }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const form = await request.formData();
+    const read = (key: string) => String(form.get(key) ?? "").trim();
+    const id = read("id");
+    if (!id) return Response.json({ error: "Selecciona la licencia que deseas modificar." }, { status: 400 });
+    const [current] = await getDb().select().from(medicalLeaves).where(eq(medicalLeaves.id, id)).limit(1);
+    if (!current) return Response.json({ error: "No se encontró la licencia médica." }, { status: 404 });
+    const workerRut = read("workerRut"); const workerName = read("workerName"); const dateFrom = read("from") || read("dateFrom"); const dateTo = read("to") || read("dateTo"); const folio = read("folio");
+    if (!workerRut || !workerName || !dateFrom || !dateTo || !folio) return Response.json({ error: "Completa los datos obligatorios de la licencia." }, { status: 400 });
+    let fileName = current.fileName; let fileKey = current.fileKey; let contentType = current.contentType;
+    const file = form.get("file");
+    if (file instanceof File && file.size) {
+      if (fileKey) await getFilesBucket().delete(fileKey);
+      fileName = file.name; contentType = file.type || "application/octet-stream";
+      fileKey = `medical-leaves/${workerRut.replace(/[^a-zA-Z0-9-]/g, "_")}/${id}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await getFilesBucket().put(fileKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
+    }
+    const [record] = await getDb().update(medicalLeaves).set({ workerRut, workerName, costCenter: read("costCenter"), dateFrom, dateTo, days: Number(read("days")), folio, specialty: read("specialty"), status: read("status") || current.status, fileName, fileKey, contentType }).where(eq(medicalLeaves.id, id)).returning();
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Licencias Médicas", action: "Modificar licencia", recordId: id, detail: `Folio ${folio} de ${workerName}` });
+    return Response.json({ medicalLeave: record });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible modificar la licencia médica." }, { status: 500 }); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const id = String(new URL(request.url).searchParams.get("id") ?? "").trim();
+    if (!id) return Response.json({ error: "Selecciona la licencia que deseas eliminar." }, { status: 400 });
+    const [current] = await getDb().select().from(medicalLeaves).where(eq(medicalLeaves.id, id)).limit(1);
+    if (!current) return Response.json({ error: "No se encontró la licencia médica." }, { status: 404 });
+    if (current.fileKey) await getFilesBucket().delete(current.fileKey);
+    await getDb().delete(medicalLeaves).where(eq(medicalLeaves.id, id));
+    await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Licencias Médicas", action: "Eliminar licencia", recordId: id, detail: `Folio ${current.folio} de ${current.workerName}` });
+    return Response.json({ deleted: true });
+  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "No fue posible eliminar la licencia médica." }, { status: 500 }); }
+}

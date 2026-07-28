@@ -222,3 +222,34 @@ test("includes sequential vacation folios, approvals and approved-only balance d
   assert.match(vacationsApi, /businessDaysBetween/);
   assert.match(vacationsApi, /La fecha Hasta no puede ser anterior/);
 });
+
+test("includes editable masters, medical leaves and daily attendance records", async () => {
+  const [operational, attendanceApi, leavesApi, templatesApi, profilesApi, companiesApi, cajaApi, schema, migration] = await Promise.all([
+    readFile(new URL("app/OperationalModules.tsx", root), "utf8"),
+    readFile(new URL("app/api/attendance/route.ts", root), "utf8"),
+    readFile(new URL("app/api/medical-leaves/route.ts", root), "utf8"),
+    readFile(new URL("app/api/document-templates/route.ts", root), "utf8"),
+    readFile(new URL("app/api/user-profiles/route.ts", root), "utf8"),
+    readFile(new URL("app/api/companies/route.ts", root), "utf8"),
+    readFile(new URL("app/api/caja-los-andes/route.ts", root), "utf8"),
+    readFile(new URL("db/schema.ts", root), "utf8"),
+    readFile(new URL("drizzle/0009_smart_quasar.sql", root), "utf8"),
+  ]);
+  assert.match(operational, /const \[entryWorker, setEntryWorker\]/);
+  assert.match(operational, /Modificar día o respaldo/);
+  assert.match(operational, /Cargar respaldo \(opcional\)/);
+  assert.match(operational, /enviada nuevamente a revisión/);
+  assert.match(attendanceApi, /Modificar asistencia diaria/);
+  assert.match(attendanceApi, /status: "En revisión"/);
+  assert.match(leavesApi, /export async function PATCH/);
+  assert.match(leavesApi, /export async function DELETE/);
+  assert.match(operational, /Modificar licencia médica/);
+  assert.match(templatesApi, /export async function PATCH/);
+  assert.match(templatesApi, /export async function DELETE/);
+  assert.match(profilesApi, /export async function DELETE/);
+  assert.match(companiesApi, /export async function PATCH/);
+  assert.match(companiesApi, /export async function DELETE/);
+  assert.match(cajaApi, /Eliminar registro Caja Los Andes/);
+  assert.match(schema, /sqliteTable\("companies"/);
+  assert.match(migration, /CREATE TABLE `companies`/);
+});

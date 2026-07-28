@@ -34,6 +34,24 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    if ((request.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+      const form = await request.formData(); const id = String(form.get("id") ?? "").trim();
+      if (!id) return Response.json({ error: "Selecciona el registro de asistencia que deseas modificar." }, { status: 400 });
+      const [current] = await getDb().select().from(attendanceEntries).where(eq(attendanceEntries.id, id)).limit(1);
+      if (!current) return Response.json({ error: "No se encontró el registro de asistencia." }, { status: 404 });
+      const states = String(form.get("states") ?? current.states); const amIn = String(form.get("amIn") ?? current.amIn); const amOut = String(form.get("amOut") ?? current.amOut); const pmIn = String(form.get("pmIn") ?? current.pmIn); const pmOut = String(form.get("pmOut") ?? current.pmOut);
+      let fileName = current.fileName; let fileKey = current.fileKey; let contentType = current.contentType; let attachmentType = current.attachmentType;
+      const file = form.get("file");
+      if (file instanceof File && file.size) {
+        if (fileKey) await getFilesBucket().delete(fileKey);
+        fileName = file.name; contentType = file.type || "application/octet-stream"; attachmentType = String(form.get("attachmentType") ?? "Respaldo individual");
+        fileKey = `attendance/${current.date}/${current.batchId}/${current.workerRut.replace(/[^a-zA-Z0-9-]/g, "_")}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        await getFilesBucket().put(fileKey, await file.arrayBuffer(), { httpMetadata: { contentType } });
+      }
+      const [entry] = await getDb().update(attendanceEntries).set({ states, amIn, amOut, pmIn, pmOut, attachmentType, fileName, fileKey, contentType, status: "En revisión" }).where(eq(attendanceEntries.id, id)).returning();
+      await getDb().insert(auditEvents).values({ userName: "Francisca", module: "Asistencia", action: "Modificar asistencia diaria", recordId: id, detail: `${current.workerName} · ${current.date}` });
+      return Response.json({ entry });
+    }
     const body = await request.json() as { batchId?: string; action?: string; reason?: string };
     const batchId = String(body.batchId || "").trim(); const action = String(body.action || "").trim();
     if (!batchId || !["approve", "reject"].includes(action)) return Response.json({ error: "Selecciona el ingreso y la acción de revisión." }, { status: 400 });
